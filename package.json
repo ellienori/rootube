@@ -2,7 +2,7 @@
   "name": "rootube",
   "version": "1.0.0",
   "scripts": {
-    "dev": "nodemon --exec babel-node index.js"
+    "dev": "nodemon --exec babel-node src/server.js"
   },
   "repository": {
     "type": "git",
@@ -14,7 +14,8 @@
   },
   "homepage": "https://github.com/ellienori/rootube#readme",
   "dependencies": {
-    "express": "^4.17.3"
+    "express": "^4.17.3",
+    "morgan": "^1.10.0"
   },
   "devDependencies": {
     "@babel/core": "^7.17.5",

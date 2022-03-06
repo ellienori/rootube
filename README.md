@@ -9,6 +9,7 @@
 * nodemon 설치
 * .gitignore
   + ```/node_modules```
+* src 폴더 생성 후 코드와 로직을 갖고 있는 모든 파일들을 그 안에 넣는다.
 
 ## package.json
 * 앞으로 점차 확장될 예정
@@ -85,3 +86,55 @@ $ npm install --save-dev nodemon
   "dev": "nodemon --exec babel-node index.js"
 },
 ```
+
+## 디렉토리 정리
+* src 아래에 로직이나 코드 관련 파일을 넣을 거야
+  + 그래서 index.js도 그 아래로 옮겼고 server.js로 이름 바꾼 다음에 package.json에서 스크립트도 수정함
+
+
+# Express
+## 서버 구축하기
+### 서버란
+* 인터넷에 연결되어 있는 항상 켜져있는 컴퓨터
+* express 사용해서 app(server) 생성
+  + 이제 이 app을 listen 해야 해
+* 브라우저가 Website(server)로 request를 보내고 server는 그에 대한 response를 준다.
+  + 그러면 서버는 request가 오는지 오지 않는지 계속 __listening__ 하고 있어야 해
+
+## Request / Response
+* __HTTP__ 는 우리가 서버와 소통하는 방법
+  + 정보를 전달할 때도 사용
+### Get Request
+* Http method
+> Cannot Get /
+  + root page (/)를 열 수 없다는 뜻
+
+### Router params
+* express app에서 Http method 쓸 때 콜백 함수 param으로 __req, res__ 가 있다.
+  + request: 브라우저가 뭔가를 요청하는 것 (e.g. method, cookie, url, ...)
+  + response: 백엔드가 브라우저로 응답해주는 것
+  + route: "/" 같은 url
+
+## Middlewares
+* middle software between request and response
+  + All controllers can be a middleware.
+  + argument req, res, next
+    + __next()__ 는 다음 함수를 호출
+
+* __app.use()__ 로 글로벌 미들웨어 생성 가능
+  + 어느 URL에도 작동하는 미들웨어
+  + 다른 get 함수 보다 위에 있어야겠지?
+
+
+### morgan
+* log를 더 정교하게 출력하는 미들웨어
+#### 설치
+```$ npm i morgan```
+
+#### 사용
+```js
+import morgan from "morgan";
+app.use(morgan("dev"));
+```
+* type에 총 5개
+  + combined, common, dev, short, tiny
