@@ -1,0 +1,25 @@
+{
+  "name": "rootube",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "nodemon --exec babel-node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ellienori/rootube.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ellienori/rootube/issues"
+  },
+  "homepage": "https://github.com/ellienori/rootube#readme",
+  "dependencies": {
+    "express": "^4.17.3"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.17.5",
+    "@babel/node": "^7.16.8",
+    "@babel/preset-env": "^7.16.11",
+    "nodemon": "^2.0.15"
+  }
+}
