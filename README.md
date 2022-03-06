@@ -12,9 +12,10 @@
 * src 폴더 생성 후 코드와 로직을 갖고 있는 모든 파일들을 그 안에 넣는다.
 
 ## package.json
-* 앞으로 점차 확장될 예정
-* 만약 내용이 잘못 됐으면 바로 수정 가능. 그냥 text file이니까
-* 얘만 있으면 나중에 프로젝트 세팅할 때 ```$ npm i```로만 모든 모듈을 다시 설치 할 수 있어.
+* Node.js 관련 정보가 담겨 있는 파일
+  + 앞으로 점차 확장될 예정
+  + 만약 내용이 잘못 됐으면 바로 수정 가능. 그냥 text file이니까
+* __얘만 있으면 나중에 프로젝트 세팅할 때 ```$ npm i```로만 모든 모듈을 다시 설치 할 수 있어__
   + 왜냐면 dependency에 모듈이 다 적혀 있으니까
 
 ### scripts?
@@ -28,6 +29,8 @@
 ### dependency?
 * 얘만 있으면 나중에 프로젝트 세팅할 때 ```$ npm i```로만 모든 모듈을 다시 설치 할 수 있어.
   + 왜냐면 dependency에 모듈이 다 적혀 있으니까
+* 두 가지 종류로 나눠져있으나 둘 다 node_modules에서 찾아오는 건 똑같다
+  + 체계화하기 위해 나눠 놓은 것
 #### 종류
 * dependencies? 프로젝트를 실행하기 위한 것 (e.g. 가솔린, 운전 면허)
 * devDependencies? 개발자에게 필요한 것 (e.g. 음악)
@@ -100,6 +103,7 @@ $ npm install --save-dev nodemon
   + 이제 이 app을 listen 해야 해
 * 브라우저가 Website(server)로 request를 보내고 server는 그에 대한 response를 준다.
   + 그러면 서버는 request가 오는지 오지 않는지 계속 __listening__ 하고 있어야 해
+  + Port? 서버는 컴퓨터 전체를 listening 할 수 없어
 
 ## Request / Response
 * __HTTP__ 는 우리가 서버와 소통하는 방법
@@ -110,7 +114,7 @@ $ npm install --save-dev nodemon
   + root page (/)를 열 수 없다는 뜻
 
 ### Router params
-* express app에서 Http method 쓸 때 콜백 함수 param으로 __req, res__ 가 있다.
+* express app에서 Http method 쓸 때 (__app.get(route, controller)__) 콜백 함수 param으로 __req, res__ 가 있다.
   + request: 브라우저가 뭔가를 요청하는 것 (e.g. method, cookie, url, ...)
   + response: 백엔드가 브라우저로 응답해주는 것
   + route: "/" 같은 url
