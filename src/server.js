@@ -11,6 +11,7 @@ app.set("view engine", "pug");
 app.set("views", process.cwd()+"/src/views");
 
 app.use(morgan("dev")); // logger
+app.use(express.urlencoded({extended: true}));
 
 app.use("/", globalRouter);
 app.use("/videos", videoRouter);
@@ -19,4 +20,3 @@ app.use("/users", userRouter);
 app.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT} 🚀`);
 });
-

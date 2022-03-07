@@ -2,3 +2,12 @@ extends ../base
 
 block content
   h1 video
+
+block content
+  h2 #{video.title}
+  ul 
+    li #{video.rating}/5
+    li #{video.comments} comments.
+    li Posted  video.createdAt
+    li #{video.views} #{video.views === 1 ? "view." : "views."}
+  a(href=`${video.id}/edit`) Edit Video &rarr;

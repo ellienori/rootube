@@ -365,3 +365,59 @@ block content
       li Sorry nothing found.
 ```
 * include 후 __+__ 표시로 사용
+
+# MONGODB AND MONGOOSE
+
+## DB를 사용하려면 우선
+* get이 아닌 post를 이해해야 함
+  + ```videoRouter.get(~)``` 여태까지 get만 씀
+
+* 미션
+  + 가짜 DB (array)의 모든 비디오를 나열
+  + 유저가 하나의 비디오를 볼 수 있으면 좋겠어 (watch)
+  + 비디오를 업로드 하고 싶어
+
+* ternary operation in pug
+```pug
+#{video.views} #{video.views === 1 ? "view." : "views."}
+```
+
+* Absoulte URL vs. Relative URL
+```pug
+a(href=`${video.id}/edit`) Edit Video &rarr;
+```
+  + ```"/edit"```을 입력하면 localhost:4000/edit으로 이동한다
+  + ```"edit"```을 입력하면 localhost:4000/videos/edit으로 이동한다.
+    + 왜냐면 현재 current directory가 localhost:4000/videos 이기 때문
+
+## POST / GET 이해하기
+* HTTP method
+
+### form
+```pug
+form(method="POST")
+  input(name="title", placeholder="Video title", value=video.title, required)
+  input(value="Save", type="submit")
+```
+* ```form(action="/save-changes")```라고 하면 입력된 URL로 GET 요청을 날린다.
+  + method 값을 따로 명시하지 않으면 GET
+* ```form(method="POST")```는 우리가 이미 알고 있는 url로 method를 POST로 요청을 날린다.
+
+### GET
+* 서버에서 어떤 데이터를 가져와서 보여줄 때, 어떤 값이나 상태 등을 바꾸지 않을 때
+  + 정보를 요청할 때 사용
+  + 데이터를 __읽거나__ , __검색__ 할 때 사용
+  + idempotent: 연산을 여러 번 수행해도 결과가 같음
+* 요청할 때 URL 주소 끝에 parameter로 데이터를 포함해서 전송 (__쿼리 스트링__)
+  + ```search?검색어```의 형태
+  + parameter에 내용이 노출되기 때문에 민감한 데이터 사용 X
+* default http method라 따로 method 설정 안해주면 get으로 되어 있음
+
+### POST
+* 파일을 보내거나 DB에 있는 값을 바꾸는(__수정/삭제__) 작업을 할 때 사용
+  + 전송해야 할 데이터를 __HTTP 메시지의 Body__ 에 담아서 전송
+  + Body의 타입은 요청 헤더의 Content-Type에 명시
+
+### express가 form을 이해하게 하려면
+* router에 연결되기 전에 form을 JS가 이해할 수 있도록 변환해주는 __middleware__ 를 써야한다.
+> app.use(express.urlencoded({extended: true}));
