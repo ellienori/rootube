@@ -1,4 +1,4 @@
-# Project Setup
+# PROJECT SETUP
 ## 프로젝트 처음 세팅 할 때 필요한 것
 * Nodejs, npm 설치
 * Project folder 생성
@@ -95,7 +95,7 @@ $ npm install --save-dev nodemon
   + 그래서 index.js도 그 아래로 옮겼고 server.js로 이름 바꾼 다음에 package.json에서 스크립트도 수정함
 
 
-# Express
+# EXPRESS
 ## 서버 구축하기
 ### 서버란
 * 인터넷에 연결되어 있는 항상 켜져있는 컴퓨터
@@ -226,3 +226,142 @@ globalRouter.get("/join", join);
 
 * JS에서 사용할 때
 >> (\\d+)
+
+# TEMPLATES
+
+## 요약
+* Pug 설치 및 세팅, 적용
+* MVP Styles 적용
+  + <https://andybrewer.github.io/mvp/>
+  + ```link(rel="stylesheet" href="https://unpkg.com/mvp.css")```
+
+## Pug
+### 개념
+* HTML을 리턴하는 데 두 가지 옵션이 있다
+  + 하나는 그냥 ```res.send("<h1>이런식</h1>");``` (미친짓)
+  + Template engine 사용하기 -> 여기서는 __Pug__
+    + template을 사용해서 view를 만드는 것
+
+* PUG: Html template helper
+  + express view engine으로 설정할 거야
+  + 우리가 pug file을 보내면 pug가 pug 파일을 평범한 html로 변화해서 사용자에게 제공함
+
+### 설치
+```$ npm i pug```
+
+### 설정
+* Express에게 view engine으로 pug를 쓰겠다고 해줘야지
+```js
+app.set("view engine", "pug");
+app.set("views", process.cwd()+"/src/views");
+```
+* pug는 기본적으로 cwd(current working directory)에서 views 폴더를 찾는다
+  + cwd의 위치는 package.json이 실행되는 곳
+  + server.js에서 ```process.cwd()``` 찍어보면 정확하게 알 수 있음
+
+* 그런데 우리 views는 src 아래에 있으니까 ```"/src/views"```라고 명시할 것
+
+### 사용
+* view를 생성한다 (home.pug)
+* videoController.js
+```js
+res.render("home")
+```
+  + render 안에 __view 이름__ 을 넣는다.
+
+
+### Partials
+* pug 파일을 생성한 후 필요한 다른 pug 파일에 include로 추가한다.
+```pug
+include partials/footer.pug
+```
+
+### Inheritance
+* base.pug 내에 __block__ 을 생성하고 해당 base.pug를 다른 pug에서 __extends__ 한 후 block에 내용을 채운다.
+  + 토대를 만들고 다른 pug는 거기서부터 확장해나간다.
+```pug
+extends base
+
+block content
+  h1 Home!
+```
+
+### Variables
+* pug에서는 ```#{}```로 JS를 실행할 수 있어
+```pug
+head 
+  title #{pageTitle} | Rootube 🐶
+```
+  + Controller에서 rendering 하면서 오브젝트를 같이 넘겨준다 : ```res.render("home", { pageTitle: "Home" })```
+
+* 다른 string이랑 같이 쓰는 거 아니면 아래처럼도 설정 가능
+```pug
+body
+  header
+    h1=pageTitle
+```
+
+### Conditionals
+* if/else statement
+```pug
+body
+  header
+    if fakeUser.loggedIn
+      small Hello #{fakeUser.username}
+    nav 
+      ul 
+        if fakeUser.loggedIn
+          li 
+            a(href="/login") Log out
+        else
+          li 
+            a(href="/login") Login
+    h1=pageTitle
+  main 
+    block content
+```
+
+### Iteration
+* for loop
+```pug
+block content
+  h1 home
+  ul 
+    each video in videos
+      li=video
+    else
+      li Sorry nothing found.
+```
+  + videos는 controller에서 parameter로 넘겨줌
+
+### Mixins (pug references)
+* 데이터를 받을 수 있고 + 반복할 수 있는 partial
+
+#### 생성
+* mixins 디렉토리를 만들고 그 안에 video.pug 파일을 생성
+```pug
+mixin video(video)
+  div 
+    h4 #{video.title} 🎬
+    ul 
+      li #{video.rating}/5
+      li #{video.comments} comments.
+      li Posted  video.createdAt
+      li #{video.views} views.
+```
+  + info라는 정보를 받아와서 어떻게 출력하겠다 라는 의미
+
+#### 사용
+```pug
+extends base
+include mixins/video
+
+block content
+  h1 home
+  ul 
+    each video in videos
+      +video(video)
+    else
+      li Sorry nothing found.
+```
+* include 후 __+__ 표시로 사용
