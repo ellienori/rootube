@@ -1,19 +1,17 @@
 import express from "express";
 import morgan from "morgan";
+import globalRouter from "./routers/globalRouter";
+import videoRouter from "./routers/videoRouter";
+import userRouter from "./routers/userRouter";
 
 const PORT = 4000;
 
 const app = express();
+app.use(morgan("dev")); // logger
 
-app.use(morgan("dev"));
-
-app.get("/", (req, res) => {
-  return res.send("test");
-});
-
-app.get("/login", (req, res) => {
-  return res.send("login");
-});
+app.use("/", globalRouter);
+app.use("/videos", videoRouter);
+app.use("/users", userRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT} 🚀`);

@@ -129,7 +129,6 @@ $ npm install --save-dev nodemon
   + 어느 URL에도 작동하는 미들웨어
   + 다른 get 함수 보다 위에 있어야겠지?
 
-
 ### morgan
 * log를 더 정교하게 출력하는 미들웨어
 #### 설치
@@ -142,3 +141,88 @@ app.use(morgan("dev"));
 ```
 * type에 총 5개
   + combined, common, dev, short, tiny
+
+# Routers
+* 우리의 Controller나 URL 관리를 쉽게 해줌
+
+## Router Plan
+
+* global router (accessible from home)
+  / -> Home
+  /join -> Join
+  /login -> Login
+  /search -> Search
+
+* users router
+  /users/:id -> User profile
+  /users/logout -> Log Out
+  /users/edit -> Edit My Profile
+  /users/delete -> Delete My Account
+
+* videos router
+  /videos/:id -> Watch Video :video id
+  /videos/:id/edit -> Edit Video
+  /videos/:id/delete -> Delete Video
+  /videos/upload -> Upload Video
+
+## Router 구조
+* globalRouter.js
+```js
+const globalRouter = express.Router();
+const handleHome = (req, res) => res.send("Home");
+globalRouter.get("/", handleHome);
+
+export default globalRouter;
+```
+* express로 생성하고 __router.get(route, controller)__ 형태로 사용한다.
+* server.js에서 사용하기 위해 __export default__ 한다.
+
+## Router 사용
+* server.js
+```js
+import globalRouter from "./routers/globalRouter";
+
+app.use("/", globalRouter);
+app.use("/videos", videoRouter);
+app.use("/users", userRouter);
+```
+* globalRouter.js에서 export된 __globalRouter__ 를 import 받아서 사용한다.
+* default export 된 것이기 때문에 ```import global from "./routers/globalRouter";```처럼 이름을 바꿔서도 사용할 수 있다.
+
+## Controller 분리
+* router.js에 함께 있던 controller 함수를 분리
+
+### Controller 구조
+* userController.js
+```js
+export const join = (req, res) => res.send("Join");
+```
+* 함수를 생성 후 export 한다.
+
+### Controller 사용
+```js
+import { join } from "../controllers/userController";
+
+globalRouter.get("/join", join);
+```
+* import해서 사용한다.
+
+## export
+### default export
+* import 했을 때 ```import globalRouter from "./routers/globalRouter";``` 형식이다.
+  + 그래서 우린 express도 default export라는 걸 알 수 있지
+
+### export
+* import 할 때 ```import { deleteUser, edit } from "../controllers/userController";``` 형식이다.
+* 이름을 변경할 수 없고 하나의 파일에서 여러 개의 함수를 import 할 수 있다.
+
+## URL Parameter
+### Regular Expression
+* 문자열로부터 특정 정보를 추출해내는 방법
+* 모든 프로그래밍 언어에 존재
+
+* 숫자만 표현하고 싶을 때
+>> (\d+)
+
+* JS에서 사용할 때
+>> (\\d+)
