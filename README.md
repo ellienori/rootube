@@ -728,3 +728,72 @@ await Video.findByIdAndUpdate(id, {
 });
 ```
 
+# USER AUTHENTICATION
+* Video에서 했던 것처럼 User도 CRUD 진행
+
+## MongoDB 명령어
+```bash
+> show dbs
+admin    0.000GB
+config   0.000GB
+local    0.000GB
+rootube  0.000GB
+wetube   0.000GB
+> use rootube
+switched to db rootube
+> show collections
+users
+videos
+> db.users.find()
+{ "_id" : ObjectId("6228988fe43bb6a876a4f5a0"), "email" : "ellie@test.com", "username" : "ellie", "password" : "12", "name" : "Ellie", "location" : "Seoul, S. Korea", "__v" : 0 }
+> db.users.remove({})
+WriteResult({ "nRemoved" : 1 })
+> db.videos.remove({})
+WriteResult({ "nRemoved" : 3 })
+```
+
+## Password Hashing
+* 해싱은 __일방향 함수__
+> 1212 -------> sdfdf
+> sdfdf ---X--> 1212
+  + 같은 input으로는 항상 같은 output이 나오지만 그 output으로 input을 유추 할 수 없다.
+
+### bcrypt
+#### 설치
+```bash
+npm i bcrypt
+```
+
+#### 사용
+* user 정보를 저장하기 전에 __middleware__ 로 password를 hashing 하자
+* ```bcrypt.hash(데이터, 횟수, 콜백함수)```의 형태로 쓰는데 async/await으로 쓸거라 CB 안써
+```js
+userSchema.pre("save", async function() {
+  this.password = await bcrypt.hash(this.password, 3);
+});
+```
+
+## 중복 체크
+```js
+const exists = await User.exists({
+  $or: [
+    {username}, {email}
+  ]
+});
+if (exists) {
+  return res.render("join", { pageTitle: "Join", errorMsg: "This username or email is already taken."});
+}
+```
+
+## Status codes
+* 우리가 잘못된 username/password를 입력해서 join이 실패해도 status code 200을 보내서 브라우저는 가입이 성공한 줄 알고 username/password를 저장할 거냐고 묻는다.
+> POST /join 200 50.066 ms - 910
+  + 그래서 우리는 가입이 성공했을 때만 200을 보내기로 할거야.
+
+### Bad request 400
+```js
+return res.status(400).render("join", { pageTitle, errorMessage: "This username or email is already taken."});
+```
+
+### Not found 404
+* video에 적용

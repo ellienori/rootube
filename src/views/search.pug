@@ -6,5 +6,6 @@ block content
     input(name="keyword", placeholder="Search by title", type="text", required)
     input(value="Search", type="submit")
 
-  each video in videos 
-    +video(video)
+  if videos
+    each video in videos 
+      +video(video)
