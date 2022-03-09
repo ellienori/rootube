@@ -6,5 +6,7 @@ block content
 block content
   h4 upload video
   form(method="POST")
-    input(name="title", placeholder="Video title", required)
+    input(name="title", placeholder="Title", required)
+    input(name="description", placeholder="Description", required)
+    input(name="hashtags", placeholder="Hashtags, separated by comma.", required)
     input(value="Save", type="submit")

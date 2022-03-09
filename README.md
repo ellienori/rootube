@@ -366,7 +366,7 @@ block content
 ```
 * include 후 __+__ 표시로 사용
 
-# MONGODB AND MONGOOSE
+# Array Data (Fake Data)
 
 ## DB를 사용하려면 우선
 * get이 아닌 post를 이해해야 함
@@ -421,3 +421,310 @@ form(method="POST")
 ### express가 form을 이해하게 하려면
 * router에 연결되기 전에 form을 JS가 이해할 수 있도록 변환해주는 __middleware__ 를 써야한다.
 > app.use(express.urlencoded({extended: true}));
+
+# MONGODB AND MONGOOSE
+## MongoDB
+### 설명
+* document-based 임 => objects(json like documents)
+* 만약 sql-based 였다면 rdb였겠지 엑셀처럼 column/rows (not flexible)
+
+### 설치
+* 참고: <https://docs.mongodb.com/manual/installation>
+
+* MongoDB 설치 (MacOS용)
+1. xcode-select --install
+2. brew tap mongodb/brew
+3. brew install mongodb-community@5.0   
+(버전은 추후에 달라질 수 있습니다.)
+
+* MongoDB Compass (MongoDB GUI): <https://www.mongodb.com/products/compass>
+
+### 설치 확인
+* terminal 열어서
+```
+$ mongod
+$ mongo
+```
+
+## Mongoose
+* nodeJS랑 mongoDB를 연결
+
+### 설치
+```bash
+$ npm i mongoose
+```
+
+### 설정
+* ```$ mongo``` 후 url rkwudhrl
+* db.js 생성 후 mongoose랑 mongoDB 연결
+```js
+import mongoose from "mongoose";
+mongoose.connect("mongodb://127.0.0.1:27017/rootube")
+
+db.on("error", (error) => console.log("❌ DB Error", error));
+db.once("open", () => console.log("Connect to DB 🐝"));
+```
+  + __on__: 계속 보고 있음
+  + __once__: 한 번 보고 말아
+
+* 서버와 DB 연결
+```js
+import "./db";
+```
+
+## CRUD
+> Create, Read, Update, Delete
+
+## Model
+* Models 아래에 데이터가 어떻게 생겼는지 정의 한다.
+
+### 스키마 Schema
+* 데이터 모양을 정의
+```js
+const videoSchema = new mongoose.Schema({
+  title: String,
+  description: String,
+  createdAt: Date,
+  hashtags: [{ type: String }], // array
+  meta: {
+    views: Number,
+    rating: Number,
+  },
+});
+```
+
+### 모델 생성
+* 스키마 정의에서 컴파일 된 생성자
+* 위에서 생성한 스키마로 모델을 생성 후 __export__ 한다.
+```js
+const Video = mongoose.model("Video", videoSchema);
+export default Video;
+```
+  + 해당 모델을 사용하기 위해서 필요한 곳에서 ```import "./models/Video";``` 한다. (서버나 init)
+
+## Model 사용
+* controller에 생성했던 fake data (array)를 지우고 Video를 import 해서 사용하자
+
+### Callback 함수로 이해하기
+```js
+export const home = (req, res) => {
+  Video.find({}, (err, videos) => {
+    return res.render();
+  });
+};
+```
+* mongoose는 __search term({})__ 조건에 따라 데이터를 가져온 후에 callback 함수를 실행한다.
+  + search term이 비어있으면 모든 데이터를 가져온다
+* 바로 error를 확인할 수 있는 장점이 있다 (인자로 넘어오니까)
+
+### Async/await로 이해하기
+```js
+export const home = async (req, res) => {
+  const videos = await Video.find({});
+  return res.render();
+};
+```
+* 순서대로 동작함, 직관적
+* 에러는 try catch로 잡아야 함
+
+## MongoDB 커맨드
+```bash
+> show dbs;
+admin   0.000GB
+config  0.000GB
+local   0.000GB
+wetube  0.000GB
+> use wetube
+switched to db wetube
+> show collections
+videos
+> help
+	db.help()                    help on db methods
+	db.mycoll.help()             help on collection methods
+	sh.help()                    sharding helpers
+	rs.help()                    replica set helpers
+	help admin                   administrative help
+	help connect                 connecting to a db help
+	help keys                    key shortcuts
+	help misc                    misc things to know
+	help mr                      mapreduce
+
+	show dbs                     show database names
+	show collections             show collections in current database
+	show users                   show users in current database
+	show profile                 show most recent system.profile entries with time >= 1ms
+	show logs                    show the accessible logger names
+	show log [name]              prints out the last segment of log in memory, 'global' is default
+	use <db_name>                set current database
+	db.mycoll.find()             list objects in collection mycoll
+	db.mycoll.find( { a : 1 } )  list objects in mycoll where a == 1
+	it                           result of the last line evaluated; use to further iterate
+	DBQuery.shellBatchSize = x   set default number of items to display on shell
+	exit                         quit the mongo shell
+> db.videos.find()
+{ "_id" : ObjectId("6210c47fa5610cae69ba8571"), "title" : "First trial", "description" : "This is a first video.", "createdAt" : ISODate("2022-02-19T10:20:47.154Z"), "hashtags" : [ "#first", "#video", "#nice" ], "meta" : { "views" : 0, "rating" : 0 }, "__v" : 0 }
+```
+
+## 데이터 생성하기
+### new로 생성 후 save 하기
+```js
+const video = new Video({
+  title,
+  description,
+  createdAt: Date.now(),
+  meta: {
+    views: 0,
+    rating: 0,
+  },
+  hashtags: hashtags.split(",").filter((word) => {
+      if (!word.trim()) {
+        return false;
+      }
+      return true;
+    })
+      .map(word => word.trim().startsWith("#") ? word.trim() : `#${word.trim()}`)
+});
+
+await video.save();
+```
+
+### create 하기
+```js
+await Video.create({
+  title,
+  description,
+  createdAt: Date.now(),
+  meta: {
+    views: 0,
+    rating: 0,
+  },
+  hashtags: hashtags.split(",").filter((word) => {
+    if (!word.trim()) {
+      return false;
+    }
+    return true;
+  })
+    .map(word => word.trim().startsWith("#") ? word.trim() : `#${word.trim()}`)
+});
+```
+* 여기서는 에러가 쉽게 날 수 있으니 try catch로 묶을 것
+
+### 그런데 매번 데이터 생성할 때마다 저 값을 다 넣어야 하나?
+```js
+createdAt: {type: Date, required: true, default: Date.now},
+meta: {
+  views: {type: Number, required: true, default: 0},
+  rating: {type: Number, required: true, default: 0},
+```
+* 늘 값이 똑같은 애들은 schema 자체에 __default__ 를 지정하자
+* 그러고 나면 controller에서 매번 지정 안해줘도 돼
+
+## MongoDB 아이디 형식
+> 6228286d07457889ee539fe6
+> __16진수 24글자 string__
+> [0-9a-f]{24}
+
+### 라우트 변경하기
+* 기존 ```"/:id(\\d+)"```에서 ```"/:id([0-9a-f]{24})"``` 으로 변경
+
+### 정규식 참고
+* 정규식 연습할 수 있는 사이트 <https://regex101.com/>
+* 정규식에 대한 MDN의 공식 문서 <https://developer.mozilla.org/ko/docs/Web/JavaScript/Guide/Regular_Expressions>
+
+## Model queries
+### findByOne
+* search term에 적은 condition을 모두 적용시킨다
+  + e.g. 조회수가 25 이상인 영상
+
+### findById / findByIdAndUpdate
+* 해당 id 데이터 출력
+
+### findByIdAndDelete와 Remove의 차이점이 뭐야?
+* 별로 차이 없는데 remove는 롤백이 안되서 다시 되돌릴 수 없기 때문에 delete 사용을 권장함
+
+### find({조건})
+* 안에 필터 조건으로 해당하는 데이터 찾을 수 있다
+
+#### find({}).sort({조건})
+* 검색해서 정렬해서 데이터 가져올 수도 있음
+```js
+const videos = await Video.find({}).sort({createdAt: -1});
+```
+
+#### regex 쓰기
+```js
+const videos = await Video.find({
+  title: {
+    $regex: new RegExp(keyword, "i"),
+  }
+});
+```
+* __i__: 대소문자를 구분하지 않음을 의미
+
+##### 만약에 keyword로 시작하는 애를 찾고 싶으면
+>new RegExp(`^${keyword}`, "i")
+
+##### keyword로 끝나는 애를 찾고 싶으면
+>new RegExp(`${keyword}$`, "i")
+
+## Model middleware
+* model이 생성되기 전에 만들어야 함
+```js
+videoSchema.pre("save", async function() {
+  this.hashtags = this.hashtags[0].split(",").filter((word) => {
+    if (!word.trim()) {
+      return false;
+    }
+    return true;
+  })
+    .map(word => word.trim().startsWith("#") ? word.trim() : `#${word.trim()}`);
+})
+```
+  + 저장되기 전에 (pre) 해당 함수를 실행한다는 의미
+    + 여기서 pre 같은 애를 __hook__ 이라고 함
+  + __this__ 를 사용할 수 있어
+  + 얘가 __create__ 할 때는 도움이 되는데 __findByIdAndUpdate__ 할 때는 도움이 안돼
+    + findByIdAndUpdate의 조상인 findByOneAndUpdate에서는 this 사용 X
+
+## Hashtags 처리하기
+### 함수로 처리하기
+```js
+// Model
+export const formatHashtags = (hashtags) => hashtags.split(",")
+.map((word) => word.trim().startsWith("#") ? word.trim() : `#${word.trim()}`);
+
+// Controller
+import Video, { formatHashtags } from "../models/Video";
+
+await Video.findByIdAndUpdate(id, {
+    title,
+    description,
+    hashtags: formatHashtags(hashtags),
+  });
+```
+
+### Statics로 처리하기
+#### static 생성
+* static은 Model에서 쓸 수 있는 함수를 생성하는 것
+* 그래서 __schema.static(함수 이름, 함수)__ 형태
+```js
+videoSchema.static('formatHashtags', function(hashtags) {
+  return hashtags.split(",").filter((word) => {
+    if (!word.trim()) {
+      return false;
+    }
+    return true;
+  })
+    .map(word => word.trim().startsWith("#") ? word.trim() : `#${word.trim()}`);
+});
+```
+
+#### static 사용
+* ```Video.formatHashtags(hashtags)```
+```js
+await Video.findByIdAndUpdate(id, {
+  title, description,
+  hashtags: Video.formatHashtags(hashtags),
+});
+```
+
