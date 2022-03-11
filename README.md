@@ -797,3 +797,101 @@ return res.status(400).render("join", { pageTitle, errorMessage: "This username 
 
 ### Not found 404
 * video에 적용
+
+## 비밀번호 비교하기
+* __bycrypt.compare(a,b)__ 사용
+```js
+const ok = await bcrypt.compare(password, user.password);
+if (!ok) {
+  return res.status(400).render("login", { pageTitle, errorMsg: "Wrong password." });
+}
+return res.redirect("/");
+```
+
+## Sessions and Cookies
+### 개념
+#### Sessions
+* Session은 백엔드와 브라우저 사이에 어떤 활동을 했는지 기억하는 것
+  + 백엔드와 브라우저 사이의 memory, history
+  + 이게 작동하려면 백엔드와 브라우저가 서로에 대한 정보를 갖고 있어야 함
+* Session ID는 Cookie에 저장된다.
+  + Session 자체가 저장되는 거 아님
+  + Session Data는 Server-side에 저장 (DB에 따로 저장)
+
+#### Cookies
+### 이게 왜 필요해?
+* 로그인 페이지에서 HTTP 요청 -> 요청 처리 -> 끝 => __Stateless__
+  + 그 이후로는 __백엔드가 아무 것도 할 수 없어__
+  + 백엔드가 html을 rendering 하고나면 연결이 끝남, __연결이 유지되지 않음__
+  + wifi 같은 애들은 계속 연결되어 있지 야는 stateless라서 아냐
+* 유저가 백엔드에 뭔가 요청할 때마다 누가 요청하는 지 알 수 있도록 해야 함
+  + 유저가 로그인 하면 우리가 유저에게 __something__ 을 준다.
+  + 유저가 백엔드에 요청날릴 때마다 __something__ 을 우리에게 보여 준다.
+
+### express-session
+#### 설치
+```bash
+npm i express-session
+```
+
+#### 설정
+```js
+import session from "express-session";
+// router 앞에 초기화 해주기
+app.use(session({
+  secret: "Hello!",
+  resave: true,
+  saveUninitialized: true,
+}));
+```
+* 이제 이 미들웨어가 로그인하지 않은 사용자도 기억함
+
+### Login시 session 저장
+```js
+// Session에 정보 추가
+req.session.loggedIn = true;
+req.session.user = user;
+```
+
+#### 그런데 template에서 어떻게 session 정보에 접근? __res.locals__
+* locals object는 이미 모든 pug template에 import된 object다.
+
+### MongoStore (connect-mongo)
+* Session data는 memory에 저장되고 있기 때문에 이를 저장할 session store가 필요하다.
+* 우리는 그래서 connect-mongo 사용해서 mongoDB에 저장할거야
+
+#### 설치
+```bash
+npm i connect-mongo
+```
+
+#### 사용
+```js
+store: MongoStore.create({mongoUrl: "mongodb://127.0.0.1:27017/rootube"})
+```
+* session data의 store를 지정한다.
+
+### saveUninitialized
+* 우리가 세션을 초기화할 때는 로그인할 떄 뿐임 
+* 초기화되지 않은 세션을 저장하겠냐는 의미임 -> false (저장안할거야)
+
+### .env
+* 관습적으로 모두 대문자로 적음
+* 사용은 __process.env.COOKIE_SECRET__
+
+#### 사용법
+1. .env 생성 후 .gitignore에 추가
+2. string 생성 후 process.env.[변수명]으로 사용
+3. 설치
+```bash
+npm i dotenv
+```
+4. import
+모든 파일의 상단에
+```js
+require("dotenv").config();
+```
+라고 적거나 init.js에 import 하기
+```js
+import "dotenv/config";
+```
