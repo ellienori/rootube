@@ -895,3 +895,157 @@ require("dotenv").config();
 ```js
 import "dotenv/config";
 ```
+
+## Github
+### flow
+* 참고: https://docs.github.com/en/developers/apps/building-oauth-apps
+
+> Step 1. 사용자를 깃헙으로 보내 (redirect to github)
+* <https://github.com/login/oauth/authorize>   
+* 해당 내용을 login.pug에 추가함, client_id는 아래 OAuth 생성하기 참고
+```pug
+a(href="https://github.com/login/oauth/authorize?client_id=fd9709cd4753cc6d8649") Continue with Github &rarr;
+```
+* 그런데 위에 처럼해서 진행하면 public data만 받아오게 됨. 
+  + 우리는 사용자 email 등의 더 많은 데이터를 원해   
+  + __scope__ 를 사용할거야. 자세한 내용은 아래 scope 참고
+
+> Step 2. 그럼 사용자는 깃헙에 이메일과 비밀번호를 넣고 우리에게 정보를 공유하는 것을 승인할거야 (Authorize)
+> Step 3. 그럼 깃헙은 사용자를 우리 사이트로 돌려보냄 + token과 함께 redirect
+
+### Step 1
+#### OAuth 생성하기
+* <github.com/settings/apps> > OAuth Apps > Create
+
+>Application name: Retube
+>Homepage URL: http://localhost:4000/
+>Authorization callback URL: http://localhost:4000/users/github/finish
+* URL에 해당 내용은 우리가 저렇게 정한 거임
+
+#### scope
+* scope에는 우리가 사용자에 대해 어디까지 알 수 있는지 적으면 된다.   
+  + 유저에게서 얼마나 많은 정보를 읽어내고 어떤 정보를 가져올 것에 대한 것
+* 참고로 카톡에서는 permission 이라고 표현한다.
+* 여러 개의 scope를 입력할 때는 __띄어쓰기__ 로 하면 된다.
+
+* allow_signup: user가 github에 계정이 없다면 생성할 수 있게 할래? 아니면 계정이 이미 있는 사람들만 로그인하게 할래?
+  + default: true
+
+>https://github.com/login/oauth/authorize?client_id=fd9709cd4753cc6d8649&allow_signup=false&scope=user:email
+url이 너무 길어서 아래처럼 임의로 정함 (login.pub)
+```pug
+a(href="/users/github/start") Continue with Github &rarr;
+```
+그리고 router와 controller에 startGithubLogin 생성   
+controller에서 *URLSearchParams* 사용
+
+config 오브젝트 생성할 때 key값을 url에 있는 거 그대로 사용해야 함
+```js
+export const startGithubLogin = (req, res) => {
+  const baseUrl = "https://github.com/login/oauth/authorize";
+  const config = {
+    client_id: "fd9709cd4753cc6d8649",
+    allow_signup: false,
+    scope: "read:user user:email",
+  }
+  const params = new URLSearchParams(config).toString();
+  const url = `${baseUrl}?${params}`;
+  return res.redirect(url);
+}
+```
+
+### Step 2
+#### authorize
+* 사용자가 login > github login > authorize 누르면 ```users/github/finish``` 로 redirect 된다.
+  + 그리고 뒤에 __?code=어쩌고__ 도 함께 보내줌
+  + 참고로 ```users/github/finish```는 우리가 github에서 oauth 생성할 때 등록한 Authorization callback URL 이다.
+
+#### access_token
+* github에서 받은 code를 access 토큰으로 바꿔줘야 해
+> POST https://github.com/login/oauth/access_token
+
+* 필요한 것 *required*
+  + code: url에 있음
+  + client_id: oauth 생성할 때 받음 -> .env에 넣을 거야
+  + client_secret: 말 그대로 비밀임. 오로지 backend에만 존재해야 함
+    + github에서 generate 할 수 있고 .env에 넣음
+
+* finishGithubLogin 함수 생성
+  + __여기서 redirect 안하고 post로 url을 보낼거야__
+
+#### fetch
+fetch 뭔가를 하고 싶거나 뭔가를 가져오고 싶을 때 쓴다.   
+POST: 우리가 url에 뭔가를 보내고 있다!
+
+##### fetch 할 때 넣는 {} 의 의미
+* HTTP headers는 는 클라이언트와 서버가 request(or response)로 부가적인 정보를 전송할 수 있도록 한다.
+
+* Accept
+  + 돌려줄 데이터 타입에 대해 서버에게 알려주는 역할
+  + MIME 타입입니다
+    + MIME type이란 웹에서 사용되는 확장자
+    + type/subtype으로 구성
+
+* Authorization
+  + 보호된 리소스에 대한 접근을 허용하여 서버로 User agent를 인증하는 자격증명을 보내는 역할
+
+##### fetch 설치 및 사용
+* nodejs에서 fetch를 사용하려면 우선 설치부터 해야함
+  + fetch는 브라우저에만 있고 서버에는 없다
+
+```bash
+npm install node-fetch@2.6.1
+```
+그리고 아래처럼 추가해야 함
+```js
+import fetch from "node-fetch";
+```
+
+```js
+const json = await data.json();
+res.send(JSON.stringify(json));
+```
+* await로 하나씩 값을 기다려서 가져오고 마지막에 res.send를 쓰면 json을 그냥 화면에 뿌려준다.
+* 값 확인하기 좋음
+  + json 안에 __access_token__ 이 있다.
+
+### Step 3
+> Authorization: token OAUTH-TOKEN
+> GET https://api.github.com/user
+
+#### json 가져오기
+```js
+// 위에꺼랑 다르게 아래는 json을 한 번에 가져오겠다.
+const {access_token} = json;
+const userRequest = await (await fetch("https://api.github.com/user", {
+  headers: {
+    Authorization: `token ${access_token}`,
+  }
+})).json();
+console.log(userRequest);
+```
+
+#### scope에 2개 넣었으니 2번 request 날려야겠지
+> 참고: https://docs.github.com/en/rest/reference/users#list-email-addresses-for-the-authenticated-user
+> GET /user/emails
+* 우리가 위에서 사용한 access_token을 가지고 이번에는 email 값을 가져오자
+```js
+const apiUrl = "https://api.github.com";
+// scope read:user
+const userData = await (await fetch(`${apiUrl}/user`, {
+  headers: {
+    Authorization: `token ${access_token}`,
+  }
+})).json();
+// scope user:email
+const emailData = await (await fetch(`${apiUrl}/user/emails`, {
+  headers: {
+    Authorization: `token ${access_token}`,
+  }
+})).json();
+```
+
+* 이제 여기서 verifed, primary 값을 찾아야 해
+```
+const email = emailData.find(value => value.primary === true && value.verified === true).email;
+```
