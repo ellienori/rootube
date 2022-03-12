@@ -1,0 +1,12 @@
+extends ../base
+
+block content
+  form(method="POST")
+    input(name="name", value=loggedInUser.name, type="text", placeholder="Name", required)
+    input(name="email", value=loggedInUser.email, type="email", placeholder="Email", onkeyup="this.value=this.value.toLowerCase()", required)
+    input(name="username", value=loggedInUser.username, type="text", placeholder="Username", onkeyup="this.value=this.value.toLowerCase()", required)
+    input(name="location", value=loggedInUser.location, type="text", placeholder="Location")
+    input(value="Save", type="submit")
+    hr
+    if (!loggedInUser.socialOnly)
+      a(href="change-password") Change Password &rarr;

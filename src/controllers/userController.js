@@ -1,6 +1,7 @@
 import User from "../models/User";
 import bcrypt from "bcrypt";
 import fetch from "node-fetch";
+import { render } from "express/lib/response";
 
 export const getJoin = (req, res) => {
   return res.render("join", { pageTitle: "Join" });
@@ -65,9 +66,43 @@ export const logout = (req, res) => {
 
 export const profile = (req, res) => res.send("User profile");
 
-export const edit = (req, res) => res.send("Edit user");
+export const getEdit = (req, res) => {
+  return res.render("users/edit", { pageTitle: "Edit" });
+};
 
-export const deleteUser = (req, res) => res.send("Delete user");
+export const postEdit = async (req, res) => {
+  const pageTitle = "Edit";
+  const {
+    session: { 
+      user: {
+        _id, avatarUrl,
+        username: _username,
+        email: _email,
+      }
+    },
+    body: { name, email, username, location }
+  } = req;
+
+  if (email !== _email) {
+    const exist = await User.exists({email});
+    if (exist) {
+      return res.status(400).render("users/edit", { pageTitle, errorMsg: "This email is already taken."});
+    }
+  }
+
+  if (username !== _username) {
+    const exist = await User.exists({username});
+    if (exist) {
+      return res.status(400).render("users/edit", { pageTitle, errorMsg: "This username is already taken."});
+    }
+  }
+
+  const user = await User.findByIdAndUpdate(_id, {
+    name, email, username, location
+  }, { new: true });
+  req.session.user = user;
+  return res.redirect("users/edit");
+};
 
 export const startGithubLogin = (req, res) => {
   const baseUrl = "https://github.com/login/oauth/authorize";
@@ -140,4 +175,35 @@ export const finishGithubLogin = async (req, res) => {
   } else {
     return res.redirect("/login");
   }
+}
+
+export const getChangePassword = (req, res) => {
+  if (req.session.user.socialOnly) {
+    return res.redirect("/");
+  }
+  return res.render("users/change-password", { pageTitle: "Change password"});
+}
+
+export const postChangePassword = async (req, res) => {
+  const pageTitle = "Change Password";
+  const {
+    session: { 
+      user: { _id, }
+    },
+    body: { currentPassword, password, password2 }
+  } = req;
+
+  const user = await User.findById(_id);
+
+  const ok = await bcrypt.compare(currentPassword, user.password);
+  if (!ok) {
+    return res.status(400).render("users/change-password", { pageTitle, errorMsg: "Current password is incorrect." });
+  }
+  if (password !== password2) {
+    return res.status(400).render("users/change-password", { pageTitle, errorMsg: "Password confirmation is not matched."});
+  }
+
+  user.password = password;
+  await user.save(); // pre("save)") -> hash in middleware
+  return res.redirect("/users/logout");
 }

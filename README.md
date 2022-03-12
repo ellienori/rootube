@@ -1049,3 +1049,40 @@ const emailData = await (await fetch(`${apiUrl}/user/emails`, {
 ```
 const email = emailData.find(value => value.primary === true && value.verified === true).email;
 ```
+
+# Edit Profile
+## 사용자의 로그인 하지 않은 상태로 edit 접근하면 undefined object error 발생
+```js
+res.locals.loggedInUser = req.session.user || {};
+```
+* undefined 일 경우 빈 오브젝트를 넣도록 middlewares에서 설정
+## Middleware
+### 로그인 사용자 / 로그인하지 않은 사용자 막는 미들웨어 생성
+```js
+// 로그인하지 않은 사용자는 로그인 페이지로 보낼 거야
+export const loggedInUserOnlyMiddleware = (req, res, next) => {
+  if (req.session.loggedIn) {
+    next();
+  } else {
+    return res.redirect("/login");
+  }
+};
+
+// 로그인 한 사용자만 접근 가능 그 외에는 홈으로
+export const publicOnlyMiddleware = (req, res, next) => {
+  if (req.session.loggedIn) {
+    return res.redirect("/");
+  } else {
+    next(); 
+  }
+}
+```
+
+### 라우트에 적용
+```js
+userRouter.get("/logout", loggedInUserOnlyMiddleware, logout);
+userRouter.route("/edit").all(loggedInUserOnlyMiddleware).get(getEdit).post(postEdit);
+userRouter.get("/github/start", publicOnlyMiddleware, startGithubLogin);
+userRouter.get("/github/finish", publicOnlyMiddleware, finishGithubLogin);
+```
+* get과 post에 나눠서 적용해야 할 경우에는 ```all()```을 사용한다.
