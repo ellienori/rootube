@@ -1086,3 +1086,86 @@ userRouter.get("/github/start", publicOnlyMiddleware, startGithubLogin);
 userRouter.get("/github/finish", publicOnlyMiddleware, finishGithubLogin);
 ```
 * get과 post에 나눠서 적용해야 할 경우에는 ```all()```을 사용한다.
+
+## User Avatar
+### Step 1. Input 만들기
+```pug
+form(method="POST")
+  label(for="avatar") Avatar 
+  input(name="avatar", id="avatar", type="file", accept="image/*")
+```
+* __accept__ 를 넣어 Image 파일만 불러올 수 있게 한다.
+
+### Step 2. middleware 사용하기 -> multer
+#### 설치
+```bash
+npm i multer
+```
+
+#### 사용
+##### form에 enctype 추가
+```pug
+form(method="POST" enctype="multipart/form-data")
+```
+* 우리 form이 다르게 encode 된다는 뜻
+
+##### configure a middleware
+* middlewares.js에 생성한다
+```js
+// multer
+export const uploadFilesByMulter = multer({
+  dest: "uploads/",
+});
+```
+  + multer를 통해 오는 파일을 ```uploads/``` 에 저장하겠다는 뜻
+  + 그리고 uploads 파일 내용은 굳이 git에 올릴 필요 없으니 .gitignore에 추가
+
+* router에 적용한다.
+> app.post(url, middleware.single(이미지가 오는 곳), controller function)
+  + 이미지가 여러개 오면 single X
+```js
+userRouter.route("/edit").all(loggedInUserOnlyMiddleware).get(getEdit).post(uploadFilesByMulter.single("avatar"), postEdit);
+```
+  + 미들 웨어는 왼쪽에서 ---> 오른쪽으로 실행된다.
+  + single 안에 늫은 이름은 pug의 form의 input 이름이랑 같아야하고 그 내용을 multer에게 넘겨준다
+  + 이렇게 하면 __req.file__ 이 생긴다.
+
+* req.file
+```bash
+{
+  fieldname: 'avatar',
+  originalname: 'IMG_4143.PNG',
+  encoding: '7bit',
+  mimetype: 'image/png',
+  destination: 'uploads/',
+  filename: 'd77bd318085c3e86fcb2ffe031bc5eea',
+  path: 'uploads/d77bd318085c3e86fcb2ffe031bc5eea',
+  size: 1292080
+}
+```
+  + __DB에는 path를 저장해 절대 file 자체를 저장하지마!__
+
+### Step 3. Avatar 불러오기
+#### Template 적용
+```pug
+img(src="/"+loggedInUser.avatarUrl width="100", height="100")
+```
+
+#### static files serving
+* 폴더 전체를 브라우저에 노출시킨다는 의미
+  + ```~/uploads/44524532525```을 보기 위해서는 ```/uploads```가 활성화 되어 있어야 하니까
+
+* route 등록
+```js
+app.use("/uploads", express.static("uploads"));
+```
+
+### 우리 file upload의 문제점
+1. 서버에 저장한다.
+  + 서버가 재시작 할 때마다 이전 서버에 있던 내용은 날아갈거야.
+  + 서버가 두 개 필요하면 어떡해? 그럼 uploads를 공유하게 할 거야? 아니면 replica를 만들거야?
+    + 파일을 우리 서버에 저장하는 게 아니라 다른 곳에 저장한다.
+    + 서버가 사라졌다 다시 돌아와도 파일이 안전하게 저장되어 있을 수 있도록.
+
+2. DB에 절대 file을 저장하면 안돼. path를 저장해야해!!
+  + 원본은 hard driver나 amazone 같은 데 저장하면 된다.

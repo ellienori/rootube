@@ -1,3 +1,5 @@
+import multer from "multer";
+
 // session을 locals에 저장하는 미들웨어
 export const localsMiddleware = (req, res, next) => {
   res.locals.siteName = "Rootube";
@@ -23,3 +25,8 @@ export const publicOnlyMiddleware = (req, res, next) => {
     next(); 
   }
 }
+
+// multer
+export const uploadFilesByMulter = multer({
+  dest: "uploads/",
+});

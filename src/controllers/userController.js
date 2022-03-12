@@ -1,7 +1,6 @@
 import User from "../models/User";
 import bcrypt from "bcrypt";
 import fetch from "node-fetch";
-import { render } from "express/lib/response";
 
 export const getJoin = (req, res) => {
   return res.render("join", { pageTitle: "Join" });
@@ -80,7 +79,8 @@ export const postEdit = async (req, res) => {
         email: _email,
       }
     },
-    body: { name, email, username, location }
+    body: { name, email, username, location },
+    file,
   } = req;
 
   if (email !== _email) {
@@ -89,19 +89,18 @@ export const postEdit = async (req, res) => {
       return res.status(400).render("users/edit", { pageTitle, errorMsg: "This email is already taken."});
     }
   }
-
   if (username !== _username) {
     const exist = await User.exists({username});
     if (exist) {
       return res.status(400).render("users/edit", { pageTitle, errorMsg: "This username is already taken."});
     }
   }
-
   const user = await User.findByIdAndUpdate(_id, {
-    name, email, username, location
+    name, email, username, location,
+    avatarUrl: file ? file.path : avatarUrl,
   }, { new: true });
   req.session.user = user;
-  return res.redirect("users/edit");
+  return res.redirect("edit");
 };
 
 export const startGithubLogin = (req, res) => {
