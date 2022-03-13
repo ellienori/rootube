@@ -63,7 +63,14 @@ export const logout = (req, res) => {
   return res.redirect("/");
 };
 
-export const profile = (req, res) => res.send("User profile");
+export const profile = async (req, res) => {
+  const { id } = req.params;
+  const user = await User.findById(id).populate("videos");
+  if (!user) {
+    return res.status(404).render("404", { pageTitle: "Error", errorMsg: "User Not Found." });
+  }
+  return res.render("users/profile", { pageTitle: user.name, user});
+};
 
 export const getEdit = (req, res) => {
   return res.render("users/edit", { pageTitle: "Edit" });

@@ -5,7 +5,7 @@ import { loggedInUserOnlyMiddleware, publicOnlyMiddleware, avatarUpload } from "
 const userRouter = express.Router();
 
 userRouter.get("/logout", loggedInUserOnlyMiddleware, logout);
-userRouter.get("/:id(\\d+)", profile);
+userRouter.get("/:id([0-9a-f]{24})", profile);
 userRouter.route("/edit").all(loggedInUserOnlyMiddleware).get(getEdit).post(avatarUpload.single("avatar"), postEdit);
 userRouter.route("/change-password").all(loggedInUserOnlyMiddleware).get(getChangePassword).post(postChangePassword);
 userRouter.get("/github/start", publicOnlyMiddleware, startGithubLogin);
