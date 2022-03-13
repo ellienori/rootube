@@ -4,6 +4,7 @@ block content
   h1 video
 
 block content
+  video(src="/"+video.fileUrl, controls)
   h3
     span 🎬 
     a(href=`/videos/${video.id}`) #{video.title}
