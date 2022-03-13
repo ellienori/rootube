@@ -1456,3 +1456,51 @@ front-end가 수정되는데 nodeJS도 자꾸 재실행된다.
   "dev:assets": "webpack"
 },
 ```
+
+# STYLES
+## Basic structure
+### MVP CSS 삭제
+* base.pug
+* 우리는 pug 기반의 views를 만들었고 MVP css를 사용하고 있었다.
+
+### font-awesome 설치
+* <https://cdnjs.com/libraries/font-awesome>로 이동해서 고른다음에 base.pug에 적용
+```pug
+link(rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css")
+```
+
+* pug에서 아래처럼 쓰면 유투브 로고가 나온다
+```pug
+i.fab.fa-youtube
+```
+
+### client/scss 폴더 구성
+#### config
+* _variaables.scss
+* _reset.scss
+  + 참고 <https://meyerweb.com/eric/tools/css/reset>
+  + 모든 설정을 0으로 바꿔주는 애야 (no padding, no margin, ...)
+
+#### components
+* partials(headers, footers, ...)나 mixins을 만들면 여기에 scss를
+
+#### screens
+* view template(home, search, ...)를 만들면 여기에 scss를
+
+#### styles.scss에서 import 해서 쓴다.
+```scss
+// Config
+@import "./config/_variables.scss";
+@import "./config/_reset.scss";
+
+// Components
+@import "./components/header.scss";
+@import "./components/footer.scss";
+
+// Screens
+
+```
+
+### partials/header 생성 후 scss 생성
+* base.pug에서 header를 분리하고 partials/header 생성
+* 그 다음, header와 footer와 이름이 똑같은 scss를 components 아래에 생성한다.
