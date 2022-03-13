@@ -703,7 +703,7 @@ await Video.findByIdAndUpdate(id, {
   });
 ```
 
-### Statics로 처리하기
+### Static으로 처리하기
 #### static 생성
 * static은 Model에서 쓸 수 있는 함수를 생성하는 것
 * 그래서 __schema.static(함수 이름, 함수)__ 형태
@@ -769,9 +769,12 @@ npm i bcrypt
 * ```bcrypt.hash(데이터, 횟수, 콜백함수)```의 형태로 쓰는데 async/await으로 쓸거라 CB 안써
 ```js
 userSchema.pre("save", async function() {
-  this.password = await bcrypt.hash(this.password, 3);
+  if(this.isModified("password")) {
+    this.password = await bcrypt.hash(this.password, 3);
+  }
 });
 ```
+  + 다른 내용 수정 후 저장할 때도 password가 hash 되는 것을 막기 위해 if문 추가
 
 ## 중복 체크
 ```js
@@ -1169,3 +1172,287 @@ app.use("/uploads", express.static("uploads"));
 
 2. DB에 절대 file을 저장하면 안돼. path를 저장해야해!!
   + 원본은 hard driver나 amazone 같은 데 저장하면 된다.
+
+## 데이터 연결하기
+* video와 user 데이터를 mongodb의 _id를 사용해서 연결하자
+  + _id는 super unique 하니까
+  + user에는 user가 업로드한 모든 영상의 id를 저장하자
+  + video에는 업로드한 owner의 id를 저장하자
+
+### Models에 적용하기
+* Model.js에 __objectId__ 를 추가하자
+  + objectId는 JS에서 제공하는 type이 아니고 mongoose에서 제공하는 type이다.
+  + 그리고 어떤 Model의 objectId인지 __ref__ 넣어야 함
+```js
+owner: { type: mongoose.Schema.Types.ObjectId, required: true, ref:"User" },
+```
+
+### Populate 사용하기
+```js
+const video = await Video.findById(id).populate("owner");
+```
+* Populate()는 objectId를 참고해서 실제 데이터를 해당 항목에 넣어준다.
+```bash
+{
+  meta: { views: 0, rating: 0 },
+  _id: new ObjectId("621afbb4649abcc85a2cb3c1"),
+  title: 'Roo',
+  description: 'Roo plays with the yellow star.',
+  videoUrl: 'uploads/videos/e0263752d59b16886dc247883265e7b8',
+  hashtags: [ '#roo', '#dogs', '#cute', '#lovely' ],
+  owner: {
+    _id: new ObjectId("621afb0d89c41998c51031ae"),
+    email: 'polystudio7@gmail.com',
+    avatarUrl: 'https://avatars.githubusercontent.com/u/84376046?v=4',
+    socialOnly: true,
+    username: 'polystudio',
+    password: '$2b$05$lBDqkxx7Q8iittmFBiPp5.5ipEBNEEYjCkO69YngDWs/RpnshEvpe',
+    name: 'polystudio',
+    location: null,
+    __v: 0
+  },
+  createdAt: 2022-02-27T04:19:00.852Z,
+  __v: 0
+}
+```
+
+#  WEBPACK - FRONTEND
+* 현재 모든 JS는 backend에서 돌아감
+  + 이제 browser에서도 JS 돌아가게 할거야
+
+## webpack이 뭔데
+* package.json의 scripts 보면 babel-node가 우리가 쓴 js코드를 nodejs가 이해할 수 있도록 번역하고 있지
+  + Frontend도 우리가 작성한 js코드를 이해할 수 있도록 js를 번들로 묶는 애 + 번역기가 필요한데 webpack이 우선 번들로 묶는 애임
+
+### 설치
+```bash
+npm i webpack webpack-cli -D
+```
+* 우리가 webpack에 알려줄 내용은 __"여기에 source files이 있고 이 곳이 네가 결과물을 보낼 폴더야."__
+ + 즉 우리가 코딩 할 곳은 src/client/js 고 browser가 읽을 곳은 assets/js 다.
+
+### webpack.config.js
+* 해당 파일 생성
+  + 이 파일은 구식 JS 문법만 이해할 수 있어
+  + import, export 이런 명령어 이해 못함
+
+* webpack.config에 필요한 내용 2가지
+  + entry
+    + 우리가 처리하고자 하는 파일을 의미 e.g. Sexy JS
+    + entry를 webpack에게 넘겨줘야하는데 src/client 아래에 있는 파일을 entry라고 하자
+  + src/client/js/main.js 생성
+* output
+  + 어디에 결과물이 나올지
+  + 무조건 __absolute path__
+
+```js
+const path = require("path");
+
+module.exports = {
+  entry: "./src/client/js/main.js",
+  output: {
+    filename: "main.js",
+    path: path.resolve(__dirname, "assets", "js"),
+  }
+}
+```
+* 그리고 config를 실행시키기 위해 package.json에 스크립트를 추가하자
+```js
+"scripts": {
+  "dev": "nodemon --exec babel-node src/init.js",
+  "assets": "webpack --config webpack.config.js"
+```
+* 실행하고 나면 assets/js/main.js에 우리가 작성한 코드가 압축되어 있는 것을 확인할 수 있다.
+```bash
+npm run assets
+```
+
+### Rules
+* rules는 우리가 각각의 파일 종류에 따라 어떤 전환을 할 건지 결정하는 것   
+* 그 파일 종류에 따라 적합한 __loader__ 를 찾아 설정하면 된다   
+  + 우리는 babel-loader가 필요함
+
+#### babel-loader
+* 참고: <https://www.npmjs.com/package/babel-loader>
+```bash
+npm i -D babel-loader @babel/core @babel/preset-env webpack
+```
+* 우리 이미 다 설치해서 babel-loader만 설치하면 돼
+
+* 설정
+``` js
+module: {
+  rules: [
+    {
+      test: /\.js$/,
+      use: {
+        loader: 'babel-loader',
+        options: {
+          presets: [
+            ['@babel/preset-env', { targets: "defaults" }]
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+  + 이 상태로 다시 npm run assets 실행시키면 코드가 더 요생해져있는데 babel이 이렇게 만든거야
+
+### mode warning
+```bash
+WARNING in configuration
+The 'mode' option has not been set, webpack will fallback to 'production' for this value.
+Set 'mode' option to 'development' or 'production' to enable defaults for each environment.
+```
+* 우선 현재 개발 중이라고 설정하자
+
+```js
+mode: "development",
+```
+
+### 폴더 구조
+* ```src/client/```: 우리가 코딩할 폴더 (webpack 전)
+* ```assets/```: 브라우저가 접근해서 볼 폴더 (webpack 후)
+
+#### express에게 assets의 정체를 알려주기
+* uploads 하듯이 server.js에 statc으로 설정한다.
+```
+app.use("/assets", express.static("assets"));
+```
+  + static? 폴더 전체를 브라우저에 노출시킨다는 의미
+
+### template과 fontend js 연결하기
+* base.pug 맨 아래에 스크립트 추가
+```pug
+script(src="/assets/js/main.js")
+```
+
+## SCSS
+* Sassy CSS
+
+### scss 폴더 및 파일 생성
+* ```src/client/scss/_variables.scss```와 ```styles.scss``` 생성 후 내용을 채우고 ```main.js```에서 ```styles.scss```를 import 한다.
+```scss
+import "../scss/styles.scss";
+```
+
+### loader 설치
+* scss를 사용하기 위해서는 loader(파일을 변환하는 장치)를 적용시켜줘야 한다.
+* webpack은 뒤에서부터 시작하기 때문에 __역순__ 으로 입력해야 한다.
+```js
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+
+module.exports = {
+  plugins: [new MiniCssExtractPlugin({
+    filename: "css/styles.css",
+  })],
+  module: {
+    rules: [
+      {
+        test: /\.scss$/,
+        use: [MiniCssExtractPlugin.loader, "css-loader", "sass-loader"],
+      },
+    ],
+  },
+};
+```
+  + minicssextraplugin 안에 filename 옵션을 줘서 해당 경로에 해당 파일로 css 파일을 저장할 수 있다.
+#### scss-loader
+* scss -> 일반 css => sass-loader
+```bash
+npm i -D sass-loader sass webpack
+```
+
+#### css-loader
+* font 등을 사용할 때 쓰는 import나 url등을 변환
+```bash
+npm i -D css-loader
+```
+
+#### MiniCssExtractPlugin
+* 참고: <https://www.npmjs.com/package/mini-css-extract-plugin>   
+* js와 css를 분리
+```js
+npm i -D mini-css-extract-plugin
+```
+
+#### 쓰려고 했던 것들
+```js
+{
+  test: /\.scss$/,
+  use: ["style-loader", "css-loader", "sass-loader"],
+}
+```
+* 변환한 css -> website에 적용(DOM) => style-loader
+```bash
+npm i -D style-loader
+```
+
+### 이제 pug에서 css 파일 연결할 거야
+```
+html(lang="ko")
+  head
+    title #{pageTitle} | Wetube
+    link(rel="stylesheet" href="https://unpkg.com/mvp.css")
+    link(rel="stylesheet" href="/assets/css/styles.css")
+```
+* 명심할 것!
+  + client 파일은 webpack에 의해서만 로딩하게 할 거고
+  + assets(static) 파일은 pug에서 로딩된다. 즉 사용자와 template은 만들어진 부분만 보게 된다.
+
+## 추가 설정
+
+### frontend도 수정되면 자동으로 npm 실행되게 하기
+* config에 *watch*를 추가하면 front-end webpack이 계속 살아있게 된다.
+```js
+watch: true,
+```
+
+### output folder를 *클린*해주는 설정을 추가한다.   
+* 근데 이거는 완벽히 webpack을 재시작했을 때만 적용된다.
+```js
+output: {
+  filename: "js/main.js",
+  path: path.resolve(__dirname, "assets"),
+  clean: true,
+},
+```
+
+### nodemon.json 생성
+front-end가 수정되는데 nodeJS도 자꾸 재실행된다.   
+그래서 nodemon 설정을 바꿀거야
+
+#### Before
+```json
+"scripts": {
+  "dev": "nodemon --exec babel-node src/init.js",
+  "assets": "webpack --config webpack.config.js"
+},
+```
+
+#### After
+* nodemon.json을 생성 후 설정 내용을 넣는다.
+```json
+{
+  "ignore": ["webpack.config.js", "src/client/*", "assets/*"],
+  "exec": "babel-node src/init.js"
+}
+```
+* 그리고 package.json은 아래처럼 수정한다.
+```json
+"scripts": {
+  "dev": "nodemon",
+  "assets": "webpack --config webpack.config.js"
+},
+```
+
+### 최종 package.json 수정
+* nodemon은 자동으로 nodemon.json을 부르고 webpack은 자동으로 webpack.config.js를 부르기 때문에 굳이 --config 설정 넣어주지 않아도 된다.
+* 그리고 dev, assets 에서 dev:server와 dev:assets으로 좀더 명시적으로 이름을 수정함
+```
+"scripts": {
+  "dev:server": "nodemon",
+  "dev:assets": "webpack"
+},
+```
