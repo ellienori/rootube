@@ -1,12 +1,18 @@
 extends ../base
 
 block content
-  form(method="POST" enctype="multipart/form-data")
-    label(for="avatar") Avatar 
-    img(src="/"+loggedInUser.avatarUrl width="100", height="100")
+  form(method="POST" enctype="multipart/form-data").edit-profile__form
+    label.form__label(for="avatar") Avatar
+    if loggedInUser.avatarUrl
+      img.avatar(src="/"+loggedInUser.avatarUrl)
+    else 
+      span.avatar__none 🥰
+    br
+    br
     input(name="avatar", id="avatar", type="file", accept="image/*")
     br
-    label User Data 
+    br
+    label.form__label User Data 
     input(name="name", value=loggedInUser.name, type="text", placeholder="Name", required)
     input(name="email", value=loggedInUser.email, type="email", placeholder="Email", onkeyup="this.value=this.value.toLowerCase()", required)
     input(name="username", value=loggedInUser.username, type="text", placeholder="Username", onkeyup="this.value=this.value.toLowerCase()", required)
