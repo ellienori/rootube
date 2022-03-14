@@ -1504,3 +1504,319 @@ i.fab.fa-youtube
 ### partials/header 생성 후 scss 생성
 * base.pug에서 header를 분리하고 partials/header 생성
 * 그 다음, header와 footer와 이름이 똑같은 scss를 components 아래에 생성한다.
+
+# VIDEO PLAYER
+## Dev env 세팅
+### js 파일 생성
+* src/client.js에 videoPlayer.js 생성
+### entry 추가
+* webpack.config.js의 entry를 obj로 변경 후 js를 추가한다.
+```json
+entry: {
+  main: "./src/client/js/main.js",
+  videoPlayer: "./src/client/js/videoPlayer.js",
+},
+```
+  * 단 output에 js/main.js로 저장하고 있으므로 file의 이름에 따라 저장될 수 있도록 아래처럼 수정한다.
+```json
+output: {
+  filename: "js/[name].js",
+  path: path.resolve(__dirname, "assets"),
+  clean: true,
+},
+```
+
+### videoPlayer.js를 비디오 플레이어가 필요한 페이지에 로드하기
+* 그건 바로 watch.pug
+  + 그런데 watch는 extend base를 하고 있어서 script를 넣을 곳이 없기 때문에 base부터 수정할게
+
+* Before base.pug
+```pug
+script(src="/assets/js/main.js")
+```
+
+* After base.pug
+```pug
+block scripts
+```
+
+* 그리고 watch.pug에서 scripts block 아래에 script를 넣어준다.
+```pug
+block scripts
+  script(src="/assets/js/videoPlayer.js")
+```
+
+### pug 주석처리
+* ```//```라고 하면 frotnend에서 볼 수 있음
+* ```//-```라고 하면 frontend에서 보이지 않음
+
+## videoPlayer.js 설정
+### video element와 audio element
+* video element와 audio element는 둘다 html media element로부터 상속받는다.   
+  + <https://developer.mozilla.org/ko/docs/Web/API/HTMLMediaElement>
+
+### element 설정
+```javascript
+const video = document.querySelector("video");
+const playBtn = document.getElementById("play");
+const muteBtn = document.getElementById("mute");
+const time = document.getElementById("time");
+const volume = document.getElementById("volume");
+```
+
+## play()와 pause()
+```javascript
+// handle play pause
+playBtn.addEventListener("click", (event) => {
+  // if the video is playing, pause it
+  if (video.paused) {
+    video.play();
+  } else {
+    // else play the video
+    video.pause();
+  }
+});
+
+// Change Innertext
+video.addEventListener("pause", (event) => {
+  playBtn.innerText="Play";
+});
+video.addEventListener("play", (event) => {
+  playBtn.innerText="Pause";
+});
+```
+
+## Property muted
+* play와 다르게 property로 존재함 (T/F)
+```js
+video.muted
+```
+
+## Volume
+* volumeRange는 *change*와 *input*이라는 이벤트를 감지한다.
+  + change: 마우스 커서를 놓을 때 값을 받아옴
+  + input: 실시간으로 커서를 이동할 때 값을 받아옴
+```javascript
+volumeRange.addEventListener("input", (event) => {
+  console.log(event.target.value);
+});
+```
+
+## Duration
+### loadedmetadata (이벤트)
+* 참고: <https://developer.mozilla.org/ko/docs/Web/API/HTMLMediaElement>
+* fired when the metadata has been loaded
+* meta data는 video를 제외한 모든 데이터
+  + e.g. width, height, ...
+
+### 사용
+* event handler
+```js
+video.addEventListener("loadedmetadata", (event) => {
+  totalTime.innerText = Math.floor(video.duration);
+});
+```
+
+### 버그
+* vent listner를 추가하기 전에 video가 전부 로딩되서 loadedMetadata가 아예 불러지지 않은 경우에 total time이 출력되지 않음
+* ```readyState == 4``` 라는 것은 비디오가 로딩 되었다는 뜻
+```js
+// handle totalTime
+const handleLoadedMetadata = () => {
+  totalTime.innerText = Math.floor(video.duration);
+}
+video.addEventListener("loadedmetadata", handleLoadedMetadata);
+
+if (video.readyState == 4) {
+  handleLoadedMetadata();
+}
+```
+
+## Current Time
+### timeupdate (event)
+* 참고: <https://developer.mozilla.org/ko/docs/Web/API/HTMLMediaElement>
+* current time이 업데이트될 때마다 cureentTime라는 value를 가져옴
+```js
+// handle currentTime
+video.addEventListener("timeupdate", (event) => {
+  currentTime.innerText = Math.floor(video.currentTime);
+});
+```
+
+## Time Formatting
+* new Date(우리값*1000).toISOString().subString(11, 19);
+  + milleseconds기 때문에 우리가 가진 초 값 * 1000 하면 우리가 아는 시간으로 계산
+  + .toISOString()으로 가져오면 앞에 1970-01-01도 같이 오니까 스트링을 잘라내자
+  + .subString(시작index, 종료index)를 쓰자. 참고로 index는 0부터 시작
+```js
+const formatTime = (seconds) => {
+  return new Date(seconds * 1000).toISOString().substring(14, 19);
+};
+```
+
+## Timeline
+### 기능
+* 우리 비디오 시간을 업데이트 해주는 기능
+  + 재생바를 움직일 때 아래 표시되는 current Time이 바뀌게
+
+* template 수정 + element 및 변수 추가
+  + template에서 timeline ranage를 생성할 때 max를 정해주지 않고
+  + loadedMetadata에서 video.duration을 max 값으로 가져오자
+
+### template과 max값 설정
+```pug
+// template
+div 
+  input(type="range", step="1", value=0, min="0")#timeline
+```
+```javascript
+// controllers
+const timeline = document.getElementById("timeline");
+
+const handleLoadedMetadata = () => {
+  totalTime.innerText = formatTime(Math.floor(video.duration));
+  timeline.max = Math.floor(video.duration);
+}
+```
+
+### controller 수정
+1. 비디오 시간에 따라 timeline range가 변경되도록 하기
+* __timeupdate__ 는 비디오 시간이 변경되는 걸 감지하는 event이기 때문에 그대로 사용하자
+```js
+video.addEventListener("timeupdate", (event) => {
+  currentTime.innerText = formatTime(Math.floor(video.currentTime));
+  timeline.value = Math.floor(video.currentTime);
+});
+```
+
+2. timeline range를 변경하면 비디오 시간이 변경되게 하기
+```js
+// handle timeline
+timeline.addEventListener("input", (event) => {
+  const {
+    target: {
+      value,
+    }
+  } = event;
+  video.currentTime = value;
+})
+```
+
+## Fullscreen
+### requestFullscreen()
+* 위의 다른 속성들처럼 #fullScreen이라는 버튼을 추가한 후 event handler에서 *requestFullscreen* 사용
+```js
+// handle fullscreen button
+fullScreenBtn.addEventListener("click", () => {
+  video.requestFullscreen();
+});
+```
+
+* 그런데 비디오만 확대하는 게 아니라 전체 요소를 다 확대하고 싶다
+  + template에 ```div#videoContainer``` 추가
+  + 똑같이 ```videoContainer.requestFullscreen()``` 사용 가능
+
+### document.fullscreenElement와 document.exitFullscreen()
+* Enter Full Screen <-> Exit Full Screen 버튼 내용 변경
+  + ```document.fullscreenElement```는 현재 fullscreen이면 해당 element를 출력함 ( e.g. div)
+  + ```document.exitFullscreen()```는 fullscreen을 벗어나게 한다.
+```javascript
+// handle fullscreen button
+fullScreenBtn.addEventListener("click", () => {
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+    fullScreen.innerText = "Enter Full Screen";
+  } else {
+    videoContainer.requestFullscreen();
+    fullScreen.innerText = "Exit Full Screen";
+  }
+});
+```
+
+### fullscreenchange (event)
+* esc 키로 창을 벗어났을 때도 버튼명을 변경하고 싶어
+```js
+videoContainer.addEventListener("fullscreenchange", () => {
+  if (!document.fullscreenElement) {
+    fullScreen.innerText = "Enter Full Screen";
+  }
+});
+```
+
+## Controls Events
+### 구현할 기능
+* 마우스가 언제 비디오에 들어가고 언제 비디오 안에서 움직이는지
+  + 마우스 커서를 비디오 위에 올리면 컨트롤이 활성화되는 기능
+  + 마우스가 움직이면 컨트롤이 활성화되는 기능
+* 마우스가 움직임을 멈추면 몇 초 후에 컨트롤러가 사라짐
+* 혹은 비디오 위에서 마우스가 사라지면 몇 초 후에 컨트롤러 사라짐
+
+### How to
+* controls에 classname을 추가해서 나중에 css에서 처리할 수 있도록 한다.
+* 위에서 설정한 상황에 따라 classname을 변경 적용 한다.
+
+### Implementation
+1. template 수정
+  * 전체 controls를 포함하는 div에 videoControls라고 아이디 추가
+  * controller에서 element 가져오기
+
+2. mousemove 이벤트 핸들러 생성
+  * video 위에 마우스가 올라가면 videoControls에 classname 생성하기
+```js
+video.addEventListener("mousemove", () => {
+  videoControls.classList.add("showing");
+});
+```
+
+3. mouseleave 이벤트 핸들러 생성
+  * video 위에 마우스 벗어나면 classname 지우기
+  * 바로 지우는 게 아니라 3초 후에 지우기 *setTimeout()*
+```javascript
+video.addEventListener("mouseleave", () => {
+  setTimeout(() => {
+    videoControls.classList.remove("showing");
+  }, 3000);
+});
+```
+  * 마우스가 중간에 다시 들어오면 setTimeout()을 취소해야해
+    + mouseleave에서 controlsTimeoutPid를 받고 mouseenter에서 지운다
+```javascript
+let controlsTimeoutPid = null;
+
+video.addEventListener("mousemove", () => {
+  videoControls.classList.add("showing");
+  clearTimeout(controlsTimeoutPid);
+});
+
+video.addEventListener("mouseleave", () => {
+  controlsTimeoutPid = setTimeout(() => {
+    videoControls.classList.remove("showing");
+  }, 3000);
+});
+```
+
+4. mouseleave 이벤트 핸들러 생성
+  * 마우스가 움직임을 멈추면 3초 후에 classname 지우기
+    + 마우스가 움직임을 시작하면 setTimeout을 실행시키면서 지우기
+    + 움직임이 멈추면 setTimeout이 clear 되지 않아
+```javascript
+let controlsMovementTimeoutPid = null;
+const hidingControls = () => videoControls.classList.remove("showing");
+
+video.addEventListener("mousemove", () => {
+  if (controlsTimeoutPid) {
+    clearTimeout(controlsTimeoutPid);
+    controlsTimeoutPid = null;
+  }
+  if(controlsMovementTimeoutPid) {
+    clearTimeout(controlsMovementTimeoutPid);
+    controlsMovementTimeoutPid = null;
+  }
+  videoControls.classList.add("showing");
+  controlsMovementTimeoutPid = setTimeout(hidingControls, 3000);
+});
+
+video.addEventListener("mouseleave", () => {
+  controlsTimeoutPid = setTimeout(hidingControls, 3000);
+});
+```
