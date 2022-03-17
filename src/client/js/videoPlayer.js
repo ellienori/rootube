@@ -115,6 +115,15 @@ videoContainer.addEventListener("fullscreenchange", () => {
   }
 });
 
+// when user finishes watching video,
+video.addEventListener("ended", () => {
+  // request to backend
+  const { id } = videoContainer.dataset;
+  fetch(`/api/videos/${id}/view`, {
+    method: "POST",
+  });
+});
+
 video.addEventListener("loadeddata", handleLoadedMetadata);
 
 if (video.readyState == 4) {

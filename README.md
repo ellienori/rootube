@@ -1820,3 +1820,85 @@ video.addEventListener("mouseleave", () => {
   controlsTimeoutPid = setTimeout(hidingControls, 3000);
 });
 ```
+
+# API VIEWS
+## 설명
+* 영상 조회수를 기록하는 기능
+  + 사용자가 영상을 다 보면 db에서 view가 1개 증가해야 함
+* __API view__: template을 랜더링하지 않는 뷰
+  + 오로지 목적은 백엔드에 정보를 전송하고 처리
+    + frontend에서 JS를 호출하는 URL
+  + 요청을 보내더라도 url을 바꾸거나 템플릿을 랜더링하지 않음
+    + form을 사용하지 않고 post를 구현
+
+## 구조 구축
+### apiRouter.js
+* videos의 id를 가져온다.
+```js
+import express from "express";
+import { registerView } from "../controllers/videoController";
+
+const apiRouter = express.Router();
+
+apiRouter.post("/videos/:id([0-9a-f]{24})/view", registerView);
+
+export default apiRouter;
+```
+
+* server.js에 추가
+```js
+app.use("/api", apiRouter);
+```
+
+### controller
+* 얘는 template을 렌더링하지 않기 때문에 __status__ 만 리턴한다.
+* render/redirection을 하지 않고 status만 출력하고 싶으면 __sendStatus()__ 를 써야한다.
+  + 404: 비디오가 없을 때
+  + 200: 정상일 때
+```js
+export const registerView = async (req, res) => {
+  // get video using id
+  const { id } = req.params;
+  const video = await Video.findById(id);
+  if(!video) {
+    return res.sendStatus(404);
+  } 
+  video.meta.views += 1;
+  await video.save();
+  return res.sendStatus(200); // OK
+};
+```
+
+## URL 호출
+### Interactivity
+* 이 URL은 frontend에서 호출해야해
+  + 보통은 해당 url로 페이지 이동하면 백엔드의 controller가 실행
+  + 여기서는 페이지 이동 없이 url을 호출하는 방법을 배울거야 => __interactivity__
+
+> Interactivity는 URL이 바뀌지 않아도 페이지에서 변화가 생기는 것을 의미
+  + e.g. 강의에 댓글을 달면 url이 바뀌지 않음
+  + 우리가 pug 쓰는 건 interactivity 하지 않아 (왜냐면 url을 바꾸니까)
+
+### videoPlayer.js
+* 유저가 비디오 시청을 끝냈을 때 생기는 이벤트를 처리하자
+  + 그냥 fetch()쓰면 get 요청이기 때문에 post로 바꿔야해
+```js
+// when user finishes watching video,
+video.addEventListener("ended", () => {
+  // request to backend
+  const { id } = videoContainer.dataset;
+  fetch(`/api/videos/${id}/view`, {
+    method: "POST",
+  });
+});
+```
+
+* fetch 하려면 비디오 id를 알아야하는데 그 아이디는 이 템플릿을 랜더링하는 pug에게 정보를 넘기라고 하자
+    + 가장 좋은 방법은 우리가 직접 데이터를 만들어서 HTML에 저장하는 것 - *data attribute*
+
+### Data attribute
+* data-로 시작하는 attribute를 의미
+  + e.g. data-columns, data-index-number, ...
+```pug
+div#videoContainer(data-id=video._id)
+```
