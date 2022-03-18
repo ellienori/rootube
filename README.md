@@ -1902,3 +1902,77 @@ video.addEventListener("ended", () => {
 ```pug
 div#videoContainer(data-id=video._id)
 ```
+
+# VIDEO RECORDER
+## 뼈대 구축
+* recorder.js
+  + 이 js는 webpack에 처리되어야 하니까 webpack.config.js에 추가
+  + webpack 재 실행하면 assets 아래에 js 생성된다
+
+* upload.pug에 script 추가
+```pug
+block scripts
+  script(src="/assets/js/recorder.js")
+```
+
+## Stream 추가
+### 사용자의 오디오, 비디오 stream 가져오기
+> navigator.mediaDevices.getUserMedia({audio: true, video: true})
+```js
+recordBtn.addEventListener("click", async () => {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: true, 
+    video: true,
+  });
+  console.log(stream);
+});
+```
+
+### error handling
+>recorder.js:6 Uncaught ReferenceError: regeneratorRuntime is not defined
+* frontend에서 async await를 쓰려면 regeneratorRuntime을 설치해야해 -> 아니면 그냥 promise로 쓰던가
+  + ```npm i regenerator-runtime```
+  + main.js에 ```import regeneratorRuntime from "regenerator-runtime";```
+  + base.pug에 main.js를 import
+
+## stream 보여주기
+### srcObject
+* *srcObject*는 video가 가질 수 있는 무언가를 의미
+```javascript
+  video.srcObject = stream;
+  video.play();
+```
+
+## Record
+### MediaRecorder
+* MediaRecorder를 사용해서 녹화 할 예정
+* __ondataavailable__ event 사용
+
+### URL.createObjectURL()
+* __URL.createObjectURL()__: 브라우저 메모리에서만 사용할 수 있는 URL을 생성
+```html
+<video id="preview" src="blob:http://localhost:4000/6e15e3ef-93a1-41f0-9e7e-136ef2426b5a"></video>
+```
+* 꼭 우리 웹사이트에서 호스팅되는 것처럼 보여도 실제론 X
+
+## Download the file
+* __Fake link__
+  + a tag 생성해서 비디오 링크를 걸고 body에 append 한 다음 걔를 클릭했다고 이벤트를 발생시키자
+```js
+const a = document.createElement("a");
+a.href = videoFile;
+a.download = "MyRecording.webm";
+document.body.appendChild(a);
+a.click();
+```
+
+* output
+```html
+<a href="blob:http://localhost:4000/d8b8e836-6d20-4dfe-a773-35099471c6ea" download="MyRecording"></a>
+```
+
+* 만약 mp4로 하고 싶으면 아래처럼 recoder 생성할 때 타입 지정하면 된다.
+  + 우리 브라우저에서는 안된다.
+```js
+recorder = new MediaRecorder(stream, {mimeType: "video/mp4"});
+```
