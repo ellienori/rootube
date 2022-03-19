@@ -40,6 +40,7 @@ app.use((req, res, next) => {
 
 app.use(flash()); // flash message
 app.use(localsMiddleware);
+app.use(express.json());
 
 app.use("/uploads", express.static("uploads"));
 app.use("/assets", express.static("assets"));

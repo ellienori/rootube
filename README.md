@@ -2270,3 +2270,177 @@ if messages.success
 ```js
 <div class="message error"><span>Log in first.</span></div>
 ```
+
+# COMMENT SECTION
+## 개요
+* 동적 댓글 창을 만들자
+* 17에서는 실제 디플로이를 할 거야
+  + assets은 절대 서버에 올리면 안되는데 우리는 올리고 있어
+* 16은 우리가 지금까지 한 거 최종 복습 시간
+
+## Comment Model
+* 모든 건 데이터로부터 시작한다!
+* models/Comment.js
+```js
+import mongoose from "mongoose";
+
+const commentSchema = new mongoose.Schema({
+  text: { type:String, required: true },
+  owner: { type: mongoose.Schema.Types.ObjectId, required: true, ref:"User" },
+  video: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "Video" },
+  createdAt: { type: Date, required: true, default: Date.now },
+});
+
+const Comment = mongoose.model("Comment", commentSchema);
+
+export default Comment;
+```
+* 어떤 비디오의 코멘트인지 알기 위해 video id 데이터를 넣는다 -> 즉 비디오는 여러 개의 코멘트를 가진다는 소리
+  + models/Video.js에 아래 내용 추가되어야 함
+  + models/User.js도 마찬가지
+```js
+comments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
+```
+
+* init.js
+```js
+import "./models/Comment";
+```
+
+## Comment Box (Frontend)
+### client/js/commentSection.js
+* 파일 생성하면 아직 webpack이 인식못하기 때문에 webpack에 넣어줘야해
+  + webpack.confing.js에 ```commentSection: BASE_JS + "/commentSection.js",``` 추가
+  + webpack을 수정하면 재시작해줘야해
+    + assets/commentSection.js가 있다? -> 잘 뜬 거
+
+### template (watch.pug)
+* template과 위에서 생성한 js 연결
+```pug
+script(src="/assets/js/commentSection.js")
+```
+
+* comment box 추가
+```pug
+if loggedIn
+  div.video__add-comments
+    form.video__comment-form#commentForm
+        textarea(cols="30", rows="10", placeholder="Write a nice commment...")
+        button Add Comment
+```
+
+### commentSection.js 함수 추가
+```js
+const videoContainer = document.getElementById("videoContainer");
+const form = document.getElementById("commentForm");
+
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const textarea = form.querySelector("textarea");
+  const text = textarea.value;
+  const videoId = videoContainer.dataset.id;
+  fetch(`/api/videos/${videoId}/comment`, {
+    method: "POST",
+    body: {
+      text,
+    }
+  });
+});
+```
+* form에 있는 버튼을 누르는 순간 form이 제출된다 -> 새로 고침
+  + 그래서 우리는 click event를 감지하는 것 대신에 form의 submit event를 감지해야해
+    + 그리고 default 동작도 막아야 해 -> event.preventDefault();
+  + fetch로 데이터 보낼 때 body에 넣어서 보낸다 (그게 POST method의 특징이잖아)
+  + api url은 apiRouter.js에 추가한다
+
+* apiRouter.js
+```js
+apiRouter.post("/videos/:id([0-9a-f]{24})/comment", createComment);
+```
+  + 위의 내용 추가하려면 videoController에 createComment 함수 있어야 해
+
+* videoController.js
+```js
+export const createComment = (req, res) => {
+  console.log(req.params);
+  console.log(req.body);
+  return res.end();
+};
+```
+  + output
+```bash
+{ id: '622318b6f8ceb9b763bb5fcf' }
+{}
+```
+  + 왜 req.body가 넘어오지 않지?
+    + 우리가 form 데이터를 req.body로 넘겨줄 때 form의 데이터를 js가 이해할 수 있도록 ```app.use(express.urlencoded({extended: true}));``` *미들웨어*를 사용했었지
+    + 이번에는 fetch 데이터를 js가 이해할 수 있게 가르쳐야 해
+      + fetch로 받아오는 데이터는 대부분 json이다
+
+* JSON.stringify() 적용
+  + commentSection.js
+```js
+fetch(`/api/videos/${videoId}/comment`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    text,
+  }),
+});
+```
+  + header는 기본적오르 Request에 대한 정보를 담고 있다
+    + content-type에 우리가 지금 *text지만 사실 json 데이터*을 보내고 있다는 걸 알려줘야해 (그래야 미들웨어가 json()을 실행시키지)
+  + stringify를 써서 String으로 변환된 데이터를 넘기면 -> *미들웨어*가 string을 json으로 변환시켜준다.
+```js
+app.use(express.json());
+```
+
+## Rendering Comments
+### DB에 넣기
+* 우리가 코멘트를 작성했는데 db데이터의 comments는 비어 있어
+* 코멘트 생성하고 나서 비디오에 comment id 넣고 user에도 comment id 넣어준다음 db 업데이트 해야해
+```js
+video.comments.push(comment._id);
+user.comments.push(comment._id);
+video.save();
+user.save();
+```
+
+### 댓글 출력하기
+* videoController.js의 watch에 __populate__ 추가
+```js
+const video = await Video.findById(id).populate("owner").populate("comments");
+```
+
+* watch에 댓글 view 추가
+
+### 실시간처럼 보이기 --deprecated--
+* __form submit handler를 async로 만들고 fetch를 await__ 한 다음 ```window.location.reload();```하면 실시간처럼 보임
+* 근데 reload하면 전체 새로고침이라 매번 db에 가서 데이터 가져오는 거임 그래서 이 방법은 안쓸거야
+
+## Realtile Comments
+* 우리가 댓글을 써서 submit되면 -> fetch -> backend로 넘어가서 (videoController.js) 작업
+  + 그런데 backend에서 status를 404 줄 때도 있고 201 줄 때도 있잖아
+  + 그래서 fetch 함수에서는 ```Promise<response>```를 리턴한다
+
+* 우리가 댓글을 뿌릴 때 pug에서 뿌리는데
+  + 새로 추가된 댓글을 js로 commentSection.js에서 바로 뿌려주면 새로고침 안해도 돼
+  + *addComment()*라는 함수 만들어서 실행시킴
+    + *prepend()*는 맨 위에 붙여준다. append()는 맨 뒤에 붙여줌
+
+## Delete Comments
+* 댓글을 지우려면 comment id가 필요해서 backend에서 넘겨주자
+```js
+return res.status(201).json({newCommentId: comment._id}); // Created
+```
+
+* 그러면 frontend js에서는 이렇게 받아온다
+```js
+if (response.status === 201) {
+  textarea.value = "";
+  const {newCommentId} = await response.json();
+  addComment(text, newCommentId);
+}
+```

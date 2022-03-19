@@ -1,0 +1,80 @@
+.video__data {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  .video__title {
+    font-size: 26px;
+    margin-bottom: 5px;
+  }
+  .video__createdAt {
+    font-size: 12px;
+  }
+  .video__owner {
+    margin-bottom: 5px;
+    font-size: 14px;
+    a {
+      color: cornflowerblue;
+      text-decoration: underline;
+    }
+  }
+}
+.video__comments {
+  display: flex;
+  position: relative;
+  flex-direction: column;
+  width: 95%;
+  margin-top: 20px;
+  padding: 5px 10px;
+  .video__comment {
+    padding: 10px;
+    border-radius: 9999px;
+    background-color: white;
+    color: black;
+    margin-bottom: 10px;
+
+    i {
+      display: inline-flex;
+      padding-left: 5px;
+      align-items: stretch;
+    }
+
+    .content {
+      display: inline-block;
+      flex-wrap: wrap;
+      padding-left: 7px;
+      width: 70%;
+    }
+
+    .deleteBtn {
+      text-align: center;
+      justify-content: center;
+      align-content: center;
+      margin: auto;
+      margin-left: 10px;
+      display: inline-end;
+      color: LightPink;
+    }
+
+    .video__comment-owner {
+      font-size: 14px;
+      float: right;
+      margin-right: 7px;
+      a {
+        color: cornflowerblue;
+        text-decoration: underline;
+      }
+    }
+
+    .video__comment-new {
+      font-size: 14px;
+      float: right;
+      margin-right: 20px;
+      color: RoyalBlue; 
+      text-shadow:
+      -1px -1px 0 WhiteSmoke,
+      1px -1px 0 WhiteSmoke,
+      -1px 1px 0 WhiteSmoke,
+      1px 1px 0 WhiteSmoke;  
+    }
+  }
+}
