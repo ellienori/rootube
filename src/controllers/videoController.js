@@ -28,7 +28,9 @@ export const postUpload = async (req, res) => {
     body: {
       title, description, hashtags
     },
-    file,
+    files: {
+      video, thumb,
+    },
     session: {
       user: { _id },
     }
@@ -38,7 +40,8 @@ export const postUpload = async (req, res) => {
       title,
       description,
       hashtags: Video.formatHashtags(hashtags),
-      fileUrl: file.path,
+      fileUrl: video[0].path,
+      thumbUrl: thumb[0].path,
       owner: _id,
     });
     const user = await User.findById(_id);

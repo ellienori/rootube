@@ -1,11 +1,16 @@
 extends ../base
 
 block content
-  div 
-    video#preview
-    button#recordBtn Start Recording 
+  div.upload__container
+    div.upload__video
+      video#preview
+      button#recordBtn.social__btn Start Recording 
   
   form(method="POST" enctype="multipart/form-data")
+    label.form__label(for="thumb") Thumbnail File 
+    input(name="thumb", id="thumb", type="file", accept="image/*", required)
+    br
+    br
     label.form__label(for="video") Video File 
     input(name="video", id="video", type="file", accept="video/*")
     br

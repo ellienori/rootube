@@ -1976,3 +1976,207 @@ a.click();
 ```js
 recorder = new MediaRecorder(stream, {mimeType: "video/mp4"});
 ```
+
+# WEB ASSEMBLY VIDEO TRANSCODE
+## 개요
+### FFmpeg
+* 비디오/오디오 같은 미디어 파일을 다룰 수 있음
+  + 비디오 압축, 오디오 추출, 화면 캡쳐 등
+* 여기서는 webm -> mp4로 변환 후 섬네일 추출 할 거야
+  + 왜냐면 ios에서 webm 못 읽어
+* 백엔드에서 실행해야 해
+  + 그런데 누가 1기가 비디오를 업로드하고 내가 그걸 변환해야 한다면? 백엔드 성능이 엄청 좋아야 해 -> 비싸
+  + 그래서 __webassembly__ 를 쓸 거야
+
+### Webassembly
+* 개발형 표준
+  + 기본적으로 웹사이트가 매우 빠른 코드를 실행할 수 있게 함
+  + 프론트에서는 세 종류의 코드만 사용할 수 있다
+    + HTML / CSS / JS
+  + Webassembly는 JS를 쓰지 않고 다른 종류의 프로그램을 사용해서 프론트엔드에서 매우 빠른 코드를 실행할 수 있어
+
+### 우리의 설계
+* 유투브는 업로드 된 비디오를 그들의 비싼 서버에서 변환할 거야
+* 우리는 사용자의 브라우저에서 비디오를 변환할거야 -> __webassembly를 사용해서 브라우저에서 FFmpeg를 돌릴 거야.__
+
+### 설치
+* ffmpeg.wasm (wasm? webassembly라는 뜻)
+  + 참고: <https://github.com/ffmpegwasm/ffmpeg.wasm>
+```bash
+npm install @ffmpeg/ffmpeg @ffmpeg/core
+```
+
+## Transcode Video
+### 설계
+* 현재 우리는 브라우저로부터 마법의 URL을 받고 있다
+  + 녹화를 종료하면 영상의 모든 정보를 가진 object url이 생성된다 (recorder.js)
+```js
+videoFile = URL.createObjectURL(event.data); 
+```
+* 사용자가 download 버튼을 누르면 영상을 불러서 변환 할 예정
+
+### 1단계
+* import 후 ffmpeg instance를 생성, load 해야 해
+```js
+import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg";
+
+const ffmpeg = createFFmpeg({log: true});
+await ffmpeg.load();
+```
+* 왜 load할 때 await 하지? 
+  + 사용자가 __software__ 를 사용하기 때문! js가 아닌 코드를 사용하기 위해 무언가를 설치해야하기 때문에
+  + 우리 웹사이트에서 다른 소프트웨어를 사용하기 때문, 그런데 그 소프트웨어가 무거울 수 있다
+  + 그런데 우리 서버에서 하는 거 아니고 유저의 브라우저에서 처리하기 때문에 컴퓨팅 파워 신경 쓸 필요는 없다
+
+### 2단계
+* 눈을 감고 우리가 브라우저 안에 있다는 생각을 멈춰 -> 우리는 폴더와 파일로 가득 찬 컴퓨터 안에 있다.
+  + webassembly를 쓰는 순간 우리는 폴더와 파일이 있는 가상의 컴퓨터를 브라우저에서 실행한거야
+* ffmpeg에 파일 생성하기
+  + 가상 컴퓨터에 파일을 생성하는 거야 -> 컴퓨터 메모리에 저장된다
+  + backend에서는 multer가 파일을 생성했지 (avatar, videos, ..)
+  + FS == File System
+```js
+ffmpeg.FS("writeFile", "recording.webm", await fetchFile(videoFile));
+```
+  + method name, file name, binary data
+  + FS안에 넣을 수 있는 method name은 3가지
+    + readFile
+    + unlink
+    + writeFile: ffmpeg의 가상 세계에 파일 생성
+
+* 파일 변환
+```js
+await ffmpeg.run("-i", "recording.webm", "-r", "60", "output.mp4");
+```
+  + 명령어, input file name, output file name
+    + -i: input
+    + 우리가 이미 위에 "recording.webm"를 만들었기 때문에 (FS 명령어로) 여기서 쓸 수 있는 거야
+    + -r 60: 초당 60프레임으로 인코딩
+
+### 온갖 에러 핸들링
+* ffmpeg core 404 error
+  + 해당 모듈의 경로를 express statc 처리해주고 ffmpeg instance 생성할 때 corePath를 임의로 지정
+```js
+// server.js
+app.use("/static", express.static("node_modules/@ffmpeg/core/dist"));
+
+// recorder.js
+const ffmpeg = createFFmpeg({
+  corePath: "/static/ffmpeg-core.js",
+  log: true
+});
+```
+
+* 그다음 무슨 promise error는 server.js에서
+```js
+// ffmpeg.wasm을 사용하기 위해 corss-origin- 어쩌구를 위함
+app.use((req, res, next) => {
+  res.header("Cross-Origin-Embedder-Policy", "require-corp");
+  res.header("Cross-Origin-Opener-Policy", "same-origin");
+  next();
+});
+```
+
+## Download Transcoded Video
+### URL 불러오기
+* 우리가 위에서 받은 output.mp4는 __브라우저 메모리__ 에 있다.
+  + 우선 이 파일을 다시 불러와야 해
+```js
+const mp4File = ffmpeg.FS("readFile", "output.mp4");
+```
+* 그러나 받아온 mp4File은 __그냥 array__ 라 할 수 있는 게 없어 -> __Blob을 만들자__
+
+### Blob 만들기
+```js
+const mp4File = ffmpeg.FS("readFile", "output.mp4");
+const mp4Blop = new Blob([mp4File.buffer], { type: "video/mp4" });
+const mp4Url = URL.createObjectURL(mp4Blop);
+```
+* Blob? JS 세계의 파일. 파일 같은 객체
+  + recording start할 때 생성한 videoFile에 들어가는 event.data도 Blob임
+  + 거기서도 event.data로 URL생성함
+* video file에 접근하고 싶으면 __buffer__ 를 사용해야해
+  + 그냥 mp4File은 array고 mp4File.buffer는 ArrayBuffer로 실제 파일을 나타내고 있다. (여기선 video file)
+  + 즉 binary data에 접근하려면 buffer를 사용해야 해
+* Blob 만들 때 배열 안에 배열
+  + 만들고나서 JS에게 mp4 type이라는 걸 알려줘야해
+
+### 비디오 저장하기
+* Before
+```javascript
+const a = document.createElement("a");
+a.href = videoFile;
+a.download = "MyRecording.webm";
+document.body.appendChild(a);
+a.click();
+```
+
+* After
+```javascript
+const a = document.createElement("a");
+a.href = mp4Url;
+a.download = "MyRecording.mp4";
+document.body.appendChild(a);
+a.click();
+```
+
+## Thumbnail
+### Thumbnail 생성
+* 영상 screenshot을 찍는 거야
+```js
+await ffmpeg.run("-i", "recording.webm", "-ss", "00:00:01", "-frames:v", "1", "thumbnail.jpg");
+```
+  + -ss: 특정 시간대로 이동
+  + -frames:v 1: 한장의 스크린샷 프레임
+  + 해당 내용은 브라우저 메모리에 저장된다.
+
+### Blob 만들기
+* 동영상 저장할 때 처럼 파일 읽고 Blop 만들고 URL 만들기
+```javascript
+const thumbFile = ffmpeg.FS("readFile", "thumbnail.jpg");
+const thumbBlop = new Blob([thumbFile.buffer], { type: "image/jpg" });
+const thumbUrl = URL.createObjectURL(thumbBlop);
+```
+
+### Thumbnail 저장
+* 동영상처럼 똑같이 저장하면 돼
+  + downloadFile이라는 함수를 만들어서 똑같이 저장해줌
+```js
+downloadFile(mp4Url, "MyRecording.mp4");
+downloadFile(thumbUrl, "MyThumbnail.jpg");
+```
+
+### Thumbnail 추가
+* Video.js의 스키마에 ThumbUrl 추가
+```js
+thumbUrl: { type: String, required: true },
+```
+
+* upload.pug에 관련 input 추가 (Video File이랑 똑같이 하면 돼)
+```pug
+label(for="thumb") Thumbnail File 
+input(name="thumb", id="thumb", type="file", accept="image/*", required)
+```
+
+* videoRouter.js는 video를 upload 할 준비가 되어 있지만 thumbnail을 업로드 할 준비 X
+  + 기존 video 같은 경우는
+    + middlewares.js에서 uploadVideoMiddleware 라는 이름으로 multer를 사용해.
+    + 그리고 videoRouter.js에서 ```.post(uploadVideoMiddleware.single("video")```로 video를 가져온다.
+  + 그런데 multer는 다행히 single 뿐만 아니라 fileds라고 받고 싶은 파일 이름을 특정 지어서 가져올 수 있어
+```javascript
+.post(uploadVideoMiddleware.fields([
+  {name: "video", maxCount: 1}, {name: "thumb", maxCount: 1},
+])
+```
+
+## 메모리에서 삭제하기
+```js
+// There are too many things in browser memory, so clean them.
+ffmpeg.FS("unlink", files.input);
+ffmpeg.FS("unlink", files.output);
+ffmpeg.FS("unlink", files.thumbnail);
+// 객체 해제
+URL.revokeObjectURL(mp4Url);
+URL.revokeObjectURL(thumbUrl);
+URL.revokeObjectURL(videoFile);
+```

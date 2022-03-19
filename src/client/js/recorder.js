@@ -1,4 +1,6 @@
 import regeneratorRuntime from "regenerator-runtime";
+import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg";
+
 const recordBtn = document.getElementById("recordBtn");
 const video = document.getElementById("preview");
 
@@ -12,7 +14,7 @@ const files = {
 
 const init = async () => {
   stream = await navigator.mediaDevices.getUserMedia({
-    audio: false, 
+    audio: true, 
     video: { width: 1024, height: 576, },
   });
   video.srcObject = stream;
@@ -53,11 +55,40 @@ const downloadFile = (fileUrl, fileName) => {
 }
 
 const handleRecordDownload = async () => {
-  const a = document.createElement("a");
-  a.href = videoFile;
-  a.download = "MyRecording.webm";
-  document.body.appendChild(a);
-  a.click();
+  const ffmpeg = createFFmpeg({
+    corePath: "/static/ffmpeg-core.js",
+    log: true
+  });
+  await ffmpeg.load();
+
+  ffmpeg.FS("writeFile", files.input, await fetchFile(videoFile));
+  await ffmpeg.run("-i", files.input, "-r", "60", files.output); // record video
+  await ffmpeg.run("-i", files.input, "-ss", "00:00:01", "-frames:v", "1", files.thumbnail); // thumbnail
+
+  const mp4File = ffmpeg.FS("readFile", files.output);
+  const thumbFile = ffmpeg.FS("readFile", files.thumbnail);
+  const mp4Blop = new Blob([mp4File.buffer], { type: "video/mp4" });
+  const thumbBlop = new Blob([thumbFile.buffer], { type: "image/jpg" });
+  const mp4Url = URL.createObjectURL(mp4Blop);
+  const thumbUrl = URL.createObjectURL(thumbBlop);
+
+  downloadFile(mp4Url, "MyRecording.mp4");
+  downloadFile(thumbUrl, "MyThumbnail.jpg");
+
+  // There are too many things in browser memory, so clean them.
+  ffmpeg.FS("unlink", files.input);
+  ffmpeg.FS("unlink", files.output);
+  ffmpeg.FS("unlink", files.thumbnail);
+  // 객체 해제
+  URL.revokeObjectURL(mp4Url);
+  URL.revokeObjectURL(thumbUrl);
+  URL.revokeObjectURL(videoFile);
+
+  recordBtn.innerText = "Start Recording";
+  recordBtn.addEventListener("click", handleRecordStart);
+  recordBtn.disabled = false;
+
+  init();
 };
 
 init();
