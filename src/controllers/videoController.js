@@ -47,6 +47,7 @@ export const postUpload = async (req, res) => {
     const user = await User.findById(_id);
     user.videos.push(newVideo._id);
     user.save();
+    req.flash("info", "Video uploaded!");
     return res.redirect("/");
   } catch(error) {
     console.log(`postUpdate error: ${error}`);
@@ -68,6 +69,7 @@ export const deleteVideo = async (req, res) => {
     return res.status(403).render("404", { pageTitle: "You are not the owner of video."});
   }
   await Video.findByIdAndRemove(id);
+  req.flash("info", "Video deleted!");
   return res.redirect("/");
 };
 
@@ -106,12 +108,14 @@ export const postEdit = async (req, res) => {
     return res.status(404).render("404", { pageTitle: "Video Not Found" });
   }
   if (String(video.owner) !== String(_id)) {
+    req.flash("error", "Not authorized.");
     return res.status(400).render("404", { pageTitle: "You are not the owner of video."});
   }
   await Video.findByIdAndUpdate(id, {
     title, description,
     hashtags: Video.formatHashtags(hashtags),
   });
+  req.flash("info", "Video updated!");
   return res.redirect("/");
 };
 

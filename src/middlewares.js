@@ -13,6 +13,7 @@ export const loggedInUserOnlyMiddleware = (req, res, next) => {
   if (req.session.loggedIn) {
     next();
   } else {
+    req.flash("error", "Not authorized.");
     return res.redirect("/login");
   }
 };
@@ -20,9 +21,10 @@ export const loggedInUserOnlyMiddleware = (req, res, next) => {
 // 로그인 한 사용자만 접근 가능 그 외에는 홈으로
 export const publicOnlyMiddleware = (req, res, next) => {
   if (req.session.loggedIn) {
+    req.flash("error", "Not authorized.");
     return res.redirect("/");
   } else {
-    next(); 
+    return next(); 
   }
 }
 

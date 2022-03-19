@@ -30,6 +30,7 @@ export const postJoin = async (req, res) => {
       username,
       location
     });
+    req.flash("info", "Please Log in 😄");
     return res.redirect("login");
   } catch(error) {
     console.log(`postJoin error: ${error}`);
@@ -46,20 +47,27 @@ export const postLogin = async (req, res) => {
   const { username, password } = req.body;
   const user = await User.findOne({username, socialOnly: false});
   if(!user) {
-    return res.status(400).render("login", { pageTitle, errorMsg: "An accout with this username doen not exist." });
+    req.flash("error", "An accout with this username doen not exist.");
+    return res.status(400).redirect("/login");
   }
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) {
-    return res.status(400).render("login", { pageTitle, errorMsg: "Wrong password." });
+    req.flash("error", "Wrong Password!");
+    return res.status(400).redirect("/login");
   }
   // Session에 정보 추가
   req.session.loggedIn = true;
   req.session.user = user;
+  req.flash("info", `Hello, ${user.name} 💜`);
   return res.redirect("/");
 };
 
 export const logout = (req, res) => {
-  req.session.destroy();
+  // req.session.destroy();
+  req.session.loggedIn = false;
+  req.session.user = null;
+  res.locals.loggedInUser = req.session.user;
+  req.flash("info", "Bye bye 🎈");
   return res.redirect("/");
 };
 
@@ -113,6 +121,7 @@ export const postEdit = async (req, res) => {
     avatarUrl: file ? file.path : avatarUrl,
   }, { new: true });
   req.session.user = user;
+  req.flash("ifno", "Updated!");
   return res.redirect("edit");
 };
 
@@ -191,6 +200,7 @@ export const finishGithubLogin = async (req, res) => {
 
 export const getChangePassword = (req, res) => {
   if (req.session.user.socialOnly) {
+    req.flash("error", "You can't change the password because you logged in with github.");
     return res.redirect("/");
   }
   return res.render("users/change-password", { pageTitle: "Change password"});
@@ -217,5 +227,6 @@ export const postChangePassword = async (req, res) => {
 
   user.password = password;
   await user.save(); // pre("save)") -> hash in middleware
+  req.flash("info", "Your password is updated.");
   return res.redirect("/users/logout");
 }

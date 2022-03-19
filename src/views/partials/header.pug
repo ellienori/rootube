@@ -13,7 +13,7 @@ header
         li
           a(href=`/users/${loggedInUser._id}`)
             if loggedInUser.avatarUrl
-              img.header__avatar(src="/"+loggedInUser.avatarUrl)
+              img.header__avatar(src=loggedInUser.avatarUrl)
             else
               span.header__avatar__none 🥰
         li
