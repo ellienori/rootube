@@ -2444,3 +2444,23 @@ if (response.status === 201) {
   addComment(text, newCommentId);
 }
 ```
+
+# DEPLOYMENT
+## Backend
+### Babel CLI
+> npm install --save-dev @babel/core @babel/cli
+* 현재는 babel-node 사용하고 있는데 얘가 속도가 느리기 때문에 babel cli 사용해서 코드 변경
+
+#### scripts 추가: build:server
+```json
+"build:server": "babel src -d build",
+```
+* ```-d build```는 build directory에 저장하겠다는 의미
+* ```% npm run build:server``` 실행하면 build 폴더가 생성되는 데 얘는 ```.gitignore```에 넣자
+
+#### scripts 추가: start
+```json
+"start": "node build/init.js",
+```
+* 실행하면 ```regeneratorRuntime is not defined``` 에러 발생 (async/await 사용 때문에)
+  + init.js 맨 위에 ```import "regenerator-runtime";``` 추가 후 ```% npm run build:server``` 한 다음에 ```% npm start``` 하기
