@@ -2446,21 +2446,30 @@ if (response.status === 201) {
 ```
 
 # DEPLOYMENT
-## Backend
-### Babel CLI
+## Build Backend
+### Babel CLI 설치
 > npm install --save-dev @babel/core @babel/cli
 * 현재는 babel-node 사용하고 있는데 얘가 속도가 느리기 때문에 babel cli 사용해서 코드 변경
 
-#### scripts 추가: build:server
+### scripts 추가: build:server
 ```json
 "build:server": "babel src -d build",
 ```
 * ```-d build```는 build directory에 저장하겠다는 의미
 * ```% npm run build:server``` 실행하면 build 폴더가 생성되는 데 얘는 ```.gitignore```에 넣자
 
-#### scripts 추가: start
+### scripts 추가: start
 ```json
 "start": "node build/init.js",
 ```
 * 실행하면 ```regeneratorRuntime is not defined``` 에러 발생 (async/await 사용 때문에)
   + init.js 맨 위에 ```import "regenerator-runtime";``` 추가 후 ```% npm run build:server``` 한 다음에 ```% npm start``` 하기
+
+## Build Frontend
+### scripts 추가: build:server
+```json
+"build:assets": "webpack --mode=production",
+"dev:assets": "webpack --mode=development -w"
+```
+* webpack.config.js에서 mode 관련 코드를 지우고 webpack build를 할 때 mode를 직접 넘겨주자
+* watch 모드도 지우고 같이 넘겨주자 ```-w --watch```
