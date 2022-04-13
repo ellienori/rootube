@@ -11,36 +11,48 @@ block content
           span#currentTime 00:00
           span  / 
           span#totalTime 00:00
-      input(type="range", step="0.5" min="0")#timeline.videoControls__timeline
+      input(type="range", step="0.1" min="0")#timeline.videoControls__timeline
       div.videoControls__volume
         input(type="range", step="0.01" min="0", max="1")#volume
-        span#mute Mute 
+        span#mute
           i.fas.fa-volume-up
       div 
         span#fullScreen
           i.fas.fa-expand
           
   div.video__data
-    p.video__title=video.title
-    small.video__owner Uploaded by 
-      a(href=`/users/${video.owner._id}`)=video.owner.name
+    div
+      p.video__title=video.title
+    div
+      small.video__createdAt #{new Date(video.createdAt).toLocaleDateString("ko-kr", {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}
+      small.video__owner &nbsp; Uploaded by 
+        a(href=`/users/${video.owner._id}`)=video.owner.name
+    hr
+    p.video__desc=video.description
+    if String(video.owner._id) === String(loggedInUser._id)
+        hr
+        hr
+        div
+          a.edit_link(href=`${video.id}/edit`) Edit Video &rarr;
+          small &nbsp; &nbsp; 
+          a.delete_link(href=`${video.id}/delete`) Delete Video &rarr;
   
-  if loggedIn
-    div.video__add-comments
-        form.video__comment-form#commentForm
-            textarea(cols="30", rows="10", placeholder="Write a nice commment...")
-            button Add Comment
-  
-  div.video__comments
-    ul 
-      each comment in video.comments.reverse()
-        li.video__comment(data-id=comment.id)
-          i.fas.fa-comment
-          span.content  #{comment.text}
-          if loggedIn && (String(comment.owner._id) === String(loggedInUser._id))
-            span.deleteBtn 🅧
-          small.video__comment-owner  by 
-            a(href=`/users/${comment.owner._id}`)=comment.owner.name
+  div.video__comments_section
+    if loggedIn
+      div.video__add-comments
+          form.video__comment-form#commentForm
+              textarea(placeholder="Write a nice commment...")
+              button Add Comment
+    div.video__comments
+      ul 
+        each comment in video.comments.reverse()
+          li.video__comment(data-id=comment.id)
+            i.fas.fa-comment
+            span.content  #{comment.text}
+            if loggedIn && (String(comment.owner._id) === String(loggedInUser._id))
+              span.deleteBtn 🅧
+            small.video__comment-owner  by 
+              a(href=`/users/${comment.owner._id}`)=comment.owner.name
 
 block scripts
   script(src="/assets/js/videoPlayer.js")

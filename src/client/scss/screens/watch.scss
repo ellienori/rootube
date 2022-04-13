@@ -1,80 +1,93 @@
 .video__data {
-  margin-top: 20px;
-  display: flex;
-  flex-direction: column;
-  .video__title {
-    font-size: 26px;
-    margin-bottom: 5px;
-  }
-  .video__createdAt {
-    font-size: 12px;
-  }
-  .video__owner {
-    margin-bottom: 5px;
-    font-size: 14px;
-    a {
-      color: cornflowerblue;
-      text-decoration: underline;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    .edit_link {
+        font-size: 12px;
+        color: #273c75;
     }
-  }
+    .delete_link {
+        font-size: 12px;
+        color: #e84118;
+    }
+    .video__title {
+        font-size: 26px;
+        margin-bottom: 5px;
+    }
+    .video__createdAt {
+        font-size: 12px;
+    }
+    .video__owner {
+        margin-bottom: 5px;
+        font-size: 14px;
+        a {
+            color: $yellow;
+            text-decoration: underline;
+        }
+    }
 }
+
+.video__comments_section {
+    position: relative;
+    width: 95%;
+    margin-top: 20px;
+    padding: 5px 10px;
+    textarea {
+        max-width: 800px;
+        &::placeholder {
+            color: rgba($point, 0.6);
+        }
+    }
+    button {
+        width: 100%;
+        border: 0 solid white;
+    }
+}
+
 .video__comments {
-  display: flex;
-  position: relative;
-  flex-direction: column;
-  width: 95%;
-  margin-top: 20px;
-  padding: 5px 10px;
-  .video__comment {
-    padding: 10px;
-    border-radius: 9999px;
-    background-color: white;
-    color: black;
-    margin-bottom: 10px;
-
-    i {
-      display: inline-flex;
-      padding-left: 5px;
-      align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+    .video__comment {
+        padding: 10px;
+        border-radius: 9999px;
+        background-color: white;
+        color: $point;
+        margin-bottom: 10px;
+        i {
+            display: inline-flex;
+            padding-left: 5px;
+            align-items: stretch;
+        }
+        .content {
+            display: inline-flex;
+            flex-wrap: wrap;
+            padding-left: 7px;
+        }
+        .deleteBtn {
+            float: right;
+            text-align: center;
+            justify-content: center;
+            align-content: center;
+            margin: auto;
+            display: inline-end;
+            color: #e84118;
+        }
+        .video__comment-owner {
+            display: inline-flex;
+            font-size: 14px;
+            float: right;
+            margin-right: 7px;
+            a {
+                color: $yellow;
+                text-decoration: underline;
+            }
+        }
+        .video__comment-new {
+            font-size: 14px;
+            float: right;
+            margin-right: 20px;
+            color: $yellow;
+            text-shadow: -1px -1px 0 WhiteSmoke, 1px -1px 0 WhiteSmoke, -1px 1px 0 WhiteSmoke, 1px 1px 0 WhiteSmoke;
+        }
     }
-
-    .content {
-      display: inline-block;
-      flex-wrap: wrap;
-      padding-left: 7px;
-      width: 70%;
-    }
-
-    .deleteBtn {
-      text-align: center;
-      justify-content: center;
-      align-content: center;
-      margin: auto;
-      margin-left: 10px;
-      display: inline-end;
-      color: LightPink;
-    }
-
-    .video__comment-owner {
-      font-size: 14px;
-      float: right;
-      margin-right: 7px;
-      a {
-        color: cornflowerblue;
-        text-decoration: underline;
-      }
-    }
-
-    .video__comment-new {
-      font-size: 14px;
-      float: right;
-      margin-right: 20px;
-      color: RoyalBlue; 
-      text-shadow:
-      -1px -1px 0 WhiteSmoke,
-      1px -1px 0 WhiteSmoke,
-      -1px 1px 0 WhiteSmoke,
-      1px 1px 0 WhiteSmoke;  
-    }
-  }
 }
